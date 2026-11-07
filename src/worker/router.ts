@@ -2,6 +2,7 @@ import type { Env } from "./env";
 import { ApiProblem, errorResponse, json } from "./errors";
 import { withSecurity } from "./http";
 import { login, logout, session } from "./routes/auth";
+import { createBehavior, deleteBehavior, updateBehavior } from "./routes/behaviors";
 import { createChild, deleteChild, updateChild } from "./routes/children";
 import { createTask, deleteTask, updateTask } from "./routes/tasks";
 
@@ -27,6 +28,9 @@ route("GET", "/api/auth/session", session);
 route("POST", "/api/children", createChild);
 route("PATCH", "/api/children/:id", updateChild);
 route("DELETE", "/api/children/:id", deleteChild);
+route("POST", "/api/behaviors", createBehavior);
+route("PATCH", "/api/behaviors/:id", updateBehavior);
+route("DELETE", "/api/behaviors/:id", deleteBehavior);
 route("POST", "/api/tasks", createTask);
 route("PATCH", "/api/tasks/:id", updateTask);
 route("DELETE", "/api/tasks/:id", deleteTask);
