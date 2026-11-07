@@ -75,6 +75,11 @@ describe("import", () => {
     const body = result.body as { error: { fields: Record<string, string> } };
     expect(body.error.fields).toMatchObject({ "items[0].childName": "孩子信息不一致" });
     expect(await countTasks("矛盾导入")).toBe(0);
+
+    const names = await post(payload([taskItem({ title: "名字矛盾", child: "甲", childName: "乙" })]));
+    expect(names.response.status).toBe(422);
+    expect((names.body as { error: { fields: Record<string, string> } }).error.fields).toMatchObject({ "items[0].childName": "孩子信息不一致" });
+    expect(await countTasks("名字矛盾")).toBe(0);
   });
 
   it("rejects an invalid mode", async () => {
@@ -97,5 +102,40 @@ describe("import", () => {
     expect(applied.body.verification).toEqual({ tasks: 0, behaviors: 1 });
     const row = await env.DB.prepare("SELECT COUNT(*) AS n FROM behaviors WHERE title = '导入表现'").first<{ n: number }>();
     expect(row?.n).toBe(1);
+    const audit = await env.DB.prepare("SELECT table_name FROM audit_log WHERE action = 'import' AND detail LIKE '%\"behaviors\":1%' ORDER BY rowid DESC LIMIT 1").first<{ table_name: string }>();
+    expect(audit?.table_name).toBe("behaviors");
+  });
+
+  it("applies 101 items through the chunked readback path", async () => {
+    const items = Array.from({ length: 101 }, (_, index) => taskItem({ title: `批量-${index}` }));
+    const applied = await post(payload(items));
+    expect(applied.response.status).toBe(200);
+    expect(applied.body.verification).toEqual({ tasks: 101, behaviors: 0 });
+    const row = await env.DB.prepare("SELECT COUNT(*) AS n FROM tasks WHERE title LIKE '批量-%'").first<{ n: number }>();
+    expect(row?.n).toBe(101);
+  });
+
+  it("cleans up every chunk when readback verification fails", async () => {
+    await env.DB.prepare("CREATE TRIGGER drop_verification_row AFTER INSERT ON tasks WHEN NEW.title = '核验批量-50' BEGIN DELETE FROM tasks WHERE id = NEW.id; END").run();
+    try {
+      const items = Array.from({ length: 101 }, (_, index) => taskItem({ title: `核验批量-${index}` }));
+      const failed = await post(payload(items));
+      expect(failed.response.status).toBe(500);
+      const body = failed.body as { error: { code: string; expected?: unknown; actual?: unknown } };
+      expect(body.error.code).toBe("verification_failed");
+      expect(body.error.expected).toEqual({ tasks: 101, behaviors: 0 });
+      expect(body.error.actual).toEqual({ tasks: 100, behaviors: 0 });
+      const left = await env.DB.prepare("SELECT COUNT(*) AS n FROM tasks WHERE title LIKE '核验批量-%'").first<{ n: number }>();
+      expect(left?.n).toBe(0);
+    } finally {
+      await env.DB.prepare("DROP TRIGGER drop_verification_row").run();
+    }
+  });
+
+  it("rejects an invalid onDuplicate value", async () => {
+    const result = await post({ ...payload([taskItem({ title: "坏重复策略" })]), onDuplicate: "merge" });
+    expect(result.response.status).toBe(422);
+    expect((result.body as { error: { fields: Record<string, string> } }).error.fields).toMatchObject({ onDuplicate: expect.any(String) });
+    expect(await countTasks("坏重复策略")).toBe(0);
   });
 });

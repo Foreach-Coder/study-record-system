@@ -1,13 +1,17 @@
 import { requireWrite } from "../auth";
 import type { Env } from "../env";
 import { ApiProblem, json } from "../errors";
-import { assertSchema, auditStatement, findDuplicate, isUniqueViolation } from "../gates";
+import { assertSchema, auditStatement, isUniqueViolation } from "../gates";
 import { readJson } from "../http";
 import { todayInShanghai } from "../../shared/dates";
 import { validateBehavior, validateTask } from "../../shared/validation";
 
 type Kind = "task" | "behavior";
 type Bucket = "tasks" | "behaviors";
+
+// D1 每个查询最多 100 个绑定参数；单批语句数也受套餐额度约束，500 是当前导入模型的安全上限。
+const MAX_ITEMS = 500;
+const ID_CHUNK = 100;
 
 interface Prepared {
   kind: Kind;
@@ -17,6 +21,11 @@ interface Prepared {
   values: Record<string, unknown>;
 }
 
+interface ChildRow {
+  id: string;
+  nickname: string;
+}
+
 function obj(value: unknown, label: string): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new ApiProblem(422, "validation", `${label} 必须是对象`);
@@ -24,37 +33,68 @@ function obj(value: unknown, label: string): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+function text(value: unknown): string | null {
+  return typeof value === "string" && value.trim() !== "" ? value.trim() : null;
+}
+
 function bucketOf(kind: Kind): Bucket {
   return kind === "task" ? "tasks" : "behaviors";
 }
 
-async function resolveChild(env: Env, data: Record<string, unknown>): Promise<{ id: string; nickname: string }> {
-  const childId = typeof data.childId === "string" && data.childId.trim() !== "" ? data.childId.trim() : null;
-  const suppliedName = typeof data.child === "string" && data.child.trim() !== ""
-    ? data.child.trim()
-    : typeof data.childName === "string" && data.childName.trim() !== ""
-      ? data.childName.trim()
-      : null;
-  const row = childId
-    ? await env.DB.prepare("SELECT id, nickname FROM children WHERE id = ?").bind(childId).first<{ id: string; nickname: string }>()
-    : suppliedName
-      ? await env.DB.prepare("SELECT id, nickname FROM children WHERE nickname = ?").bind(suppliedName).first<{ id: string; nickname: string }>()
-      : null;
+function rowKey(kind: Kind, values: Record<string, unknown>): string {
+  return JSON.stringify([kind, values.childName, values.title, kind === "task" ? values.dueDate : values.occurredOn]);
+}
+
+function chunks<T>(values: T[]): T[][] {
+  const out: T[][] = [];
+  for (let index = 0; index < values.length; index += ID_CHUNK) out.push(values.slice(index, index + ID_CHUNK));
+  return out;
+}
+
+async function loadChildren(env: Env): Promise<{ byId: Map<string, ChildRow>; byNickname: Map<string, ChildRow> }> {
+  const result = await env.DB.prepare("SELECT id, nickname FROM children").all<ChildRow>();
+  const byId = new Map<string, ChildRow>();
+  const byNickname = new Map<string, ChildRow>();
+  for (const row of result.results ?? []) {
+    byId.set(row.id, row);
+    byNickname.set(row.nickname, row);
+  }
+  return { byId, byNickname };
+}
+
+async function loadExistingKeys(env: Env): Promise<Map<string, string>> {
+  const [taskRows, behaviorRows] = await Promise.all([
+    env.DB.prepare("SELECT id, child_name, title, due_date FROM tasks").all<{ id: string; child_name: string; title: string; due_date: string }>(),
+    env.DB.prepare("SELECT id, child_name, occurred_on, title FROM behaviors").all<{ id: string; child_name: string; occurred_on: string; title: string }>(),
+  ]);
+  const keys = new Map<string, string>();
+  for (const row of taskRows.results ?? []) {
+    keys.set(rowKey("task", { childName: row.child_name, title: row.title, dueDate: row.due_date }), row.id);
+  }
+  for (const row of behaviorRows.results ?? []) {
+    keys.set(rowKey("behavior", { childName: row.child_name, title: row.title, occurredOn: row.occurred_on }), row.id);
+  }
+  return keys;
+}
+
+function resolveChild(
+  data: Record<string, unknown>,
+  byId: Map<string, ChildRow>,
+  byNickname: Map<string, ChildRow>,
+): ChildRow {
+  const childId = text(data.childId);
+  const childValue = text(data.child);
+  const childNameValue = text(data.childName);
+  if (childValue && childNameValue && childValue !== childNameValue) {
+    throw new ApiProblem(422, "validation", "孩子信息不一致", { childName: "孩子信息不一致" });
+  }
+  const suppliedName = childValue ?? childNameValue;
+  const row = childId ? byId.get(childId) : suppliedName ? byNickname.get(suppliedName) : undefined;
   if (!row) throw new ApiProblem(422, "validation", "孩子不存在", { childName: "请选择孩子" });
   if (childId && suppliedName && row.nickname !== suppliedName) {
     throw new ApiProblem(422, "validation", "孩子信息不一致", { childName: "孩子信息不一致" });
   }
   return row;
-}
-
-function itemKey(kind: Kind, values: Record<string, unknown>): string {
-  return JSON.stringify([kind, values.childName, values.title, kind === "task" ? values.dueDate : values.occurredOn]);
-}
-
-async function findExisting(env: Env, kind: Kind, values: Record<string, unknown>): Promise<string | null> {
-  return kind === "task"
-    ? findDuplicate(env, "tasks", "child_name = ? AND title = ? AND due_date = ?", [values.childName, values.title, values.dueDate])
-    : findDuplicate(env, "behaviors", "child_name = ? AND occurred_on = ? AND title = ?", [values.childName, values.occurredOn, values.title]);
 }
 
 function taskInsert(env: Env, item: Prepared): D1PreparedStatement {
@@ -104,9 +144,10 @@ function behaviorInsert(env: Env, item: Prepared): D1PreparedStatement {
 }
 
 async function deleteByIds(env: Env, table: Bucket, ids: string[]): Promise<void> {
-  if (ids.length === 0) return;
-  const placeholders = ids.map(() => "?").join(",");
-  await env.DB.prepare(`DELETE FROM ${table} WHERE id IN (${placeholders})`).bind(...ids).run().catch(() => undefined);
+  for (const chunk of chunks(ids)) {
+    const placeholders = chunk.map(() => "?").join(",");
+    await env.DB.prepare(`DELETE FROM ${table} WHERE id IN (${placeholders})`).bind(...chunk).run().catch(() => undefined);
+  }
 }
 
 async function cleanup(env: Env, prepared: Prepared[]): Promise<void> {
@@ -117,10 +158,25 @@ async function cleanup(env: Env, prepared: Prepared[]): Promise<void> {
 }
 
 async function countIds(env: Env, table: Bucket, ids: string[]): Promise<number> {
-  if (ids.length === 0) return 0;
-  const placeholders = ids.map(() => "?").join(",");
-  const row = await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE id IN (${placeholders})`).bind(...ids).first<{ n: number }>();
-  return row?.n ?? 0;
+  let total = 0;
+  for (const chunk of chunks(ids)) {
+    const placeholders = chunk.map(() => "?").join(",");
+    const row = await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE id IN (${placeholders})`)
+      .bind(...chunk)
+      .first<{ n: number }>();
+    total += row?.n ?? 0;
+  }
+  return total;
+}
+
+async function verify(env: Env, prepared: Prepared[]): Promise<Record<Bucket, number>> {
+  const taskIds = prepared.filter((item) => item.kind === "task").map((item) => item.id);
+  const behaviorIds = prepared.filter((item) => item.kind === "behavior").map((item) => item.id);
+  const [tasks, behaviors] = await Promise.all([
+    countIds(env, "tasks", taskIds),
+    countIds(env, "behaviors", behaviorIds),
+  ]);
+  return { tasks, behaviors };
 }
 
 export async function importItems(request: Request, env: Env): Promise<Response> {
@@ -131,10 +187,13 @@ export async function importItems(request: Request, env: Env): Promise<Response>
     throw new ApiProblem(422, "validation", "mode 不合法", { mode: "mode 必须是 dry-run 或 apply" });
   }
   const mode = body.mode;
-  const onDuplicate = body.onDuplicate === "skip" ? "skip" : "error";
+  const onDuplicate = body.onDuplicate === undefined ? "error" : body.onDuplicate;
+  if (onDuplicate !== "error" && onDuplicate !== "skip") {
+    throw new ApiProblem(422, "validation", "onDuplicate 不合法", { onDuplicate: "onDuplicate 必须是 error 或 skip" });
+  }
   const items = body.items;
-  if (!Array.isArray(items) || items.length === 0 || items.length > 1000) {
-    throw new ApiProblem(422, "validation", "items 数量必须在 1..1000", { items: "items 数量必须在 1..1000" });
+  if (!Array.isArray(items) || items.length === 0 || items.length > MAX_ITEMS) {
+    throw new ApiProblem(422, "validation", `items 数量必须在 1..${MAX_ITEMS}`, { items: `items 数量必须在 1..${MAX_ITEMS}` });
   }
 
   const today = todayInShanghai();
@@ -145,6 +204,8 @@ export async function importItems(request: Request, env: Env): Promise<Response>
   const invalid: Record<string, string> = {};
   const duplicates: Record<string, string> = {};
 
+  const [{ byId, byNickname }, existingKeys] = await Promise.all([loadChildren(env), loadExistingKeys(env)]);
+
   for (let index = 0; index < items.length; index += 1) {
     const item = obj(items[index], `items[${index}]`);
     const kind = item.kind;
@@ -154,7 +215,7 @@ export async function importItems(request: Request, env: Env): Promise<Response>
     }
     const data = obj(item.data, `items[${index}].data`);
     try {
-      const child = await resolveChild(env, data);
+      const child = resolveChild(data, byId, byNickname);
       const result = kind === "task"
         ? validateTask({ ...data, child: child.nickname }, { today, childNames: new Set([child.nickname]) })
         : validateBehavior({ ...data, child: child.nickname }, { today, childNames: new Set([child.nickname]) });
@@ -162,9 +223,9 @@ export async function importItems(request: Request, env: Env): Promise<Response>
         for (const [key, message] of Object.entries(result.fields)) invalid[`items[${index}].${key}`] = message;
         continue;
       }
-      const legacyId = typeof data.legacyId === "string" && data.legacyId.trim() !== "" ? data.legacyId : null;
+      const legacyId = text(data.legacyId);
       const values: Record<string, unknown> = { ...result.value, childName: child.nickname, createdAt: now, legacyId };
-      const key = itemKey(kind, values);
+      const key = rowKey(kind, values);
       const first = seen.get(key);
       if (first !== undefined) {
         if (onDuplicate === "skip") {
@@ -174,7 +235,7 @@ export async function importItems(request: Request, env: Env): Promise<Response>
         }
         continue;
       }
-      const existing = await findExisting(env, kind, values);
+      const existing = existingKeys.get(key);
       if (existing) {
         if (onDuplicate === "skip") {
           skipped[bucketOf(kind)] += 1;
@@ -212,10 +273,11 @@ export async function importItems(request: Request, env: Env): Promise<Response>
 
   await assertSchema(env);
   const statements = prepared.map((item) => (item.kind === "task" ? taskInsert(env, item) : behaviorInsert(env, item)));
+  const auditTable: Bucket = counts.tasks === 0 && counts.behaviors > 0 ? "behaviors" : "tasks";
   statements.push(auditStatement(env, {
     actor: auth.mode === "bearer" ? "cli" : "web",
     action: "import",
-    table: "tasks",
+    table: auditTable,
     recordId: null,
     requestId: crypto.randomUUID(),
     detail: counts,
@@ -231,13 +293,13 @@ export async function importItems(request: Request, env: Env): Promise<Response>
     throw new ApiProblem(500, "write_failed", "导入写入失败", undefined, { reason: String(error) });
   }
 
-  const taskIds = prepared.filter((item) => item.kind === "task").map((item) => item.id);
-  const behaviorIds = prepared.filter((item) => item.kind === "behavior").map((item) => item.id);
-  const [taskCount, behaviorCount] = await Promise.all([
-    countIds(env, "tasks", taskIds),
-    countIds(env, "behaviors", behaviorIds),
-  ]);
-  const verification = { tasks: taskCount, behaviors: behaviorCount };
+  let verification: Record<Bucket, number>;
+  try {
+    verification = await verify(env, prepared);
+  } catch (error) {
+    await cleanup(env, prepared);
+    throw new ApiProblem(500, "verification_failed", "导入后无法回读核验", undefined, { reason: String(error) });
+  }
   if (verification.tasks !== counts.tasks || verification.behaviors !== counts.behaviors) {
     await cleanup(env, prepared);
     throw new ApiProblem(500, "verification_failed", "导入后行数不符", undefined, { expected: counts, actual: verification });
