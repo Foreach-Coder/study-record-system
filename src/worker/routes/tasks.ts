@@ -9,14 +9,21 @@ import type { Task } from "../../shared/schema";
 import { validateTask } from "../../shared/validation";
 
 async function resolveChild(env: Env, body: Record<string, unknown>): Promise<{ id: string; nickname: string }> {
-  const childId = typeof body.childId === "string" ? body.childId : null;
-  const childName = typeof body.child === "string" ? body.child : typeof body.childName === "string" ? body.childName : null;
+  const childId = typeof body.childId === "string" && body.childId.trim() !== "" ? body.childId.trim() : null;
+  const suppliedName = typeof body.child === "string" && body.child.trim() !== ""
+    ? body.child.trim()
+    : typeof body.childName === "string" && body.childName.trim() !== ""
+      ? body.childName.trim()
+      : null;
   const row = childId
     ? await env.DB.prepare("SELECT id, nickname FROM children WHERE id = ?").bind(childId).first<{ id: string; nickname: string }>()
-    : childName
-      ? await env.DB.prepare("SELECT id, nickname FROM children WHERE nickname = ?").bind(childName).first<{ id: string; nickname: string }>()
+    : suppliedName
+      ? await env.DB.prepare("SELECT id, nickname FROM children WHERE nickname = ?").bind(suppliedName).first<{ id: string; nickname: string }>()
       : null;
   if (!row) throw new ApiProblem(422, "validation", "孩子不存在", { childName: "请选择孩子" });
+  if (childId && suppliedName && row.nickname !== suppliedName) {
+    throw new ApiProblem(422, "validation", "孩子信息不一致", { childName: "孩子信息不一致" });
+  }
   return row;
 }
 
@@ -55,9 +62,12 @@ export async function createTask(request: Request, env: Env): Promise<Response> 
   const auth = await requireWrite(request, env);
   const body = await readJson(request);
   const child = await resolveChild(env, body);
-  const result = validateTask({ ...body, child: child.nickname }, { today: todayInShanghai(), childNames: new Set([child.nickname]) });
+  const rawStart = body.startDate;
+  const missingStart = rawStart == null || (typeof rawStart === "string" && rawStart.trim() === "");
+  const requestedStart = missingStart ? todayInShanghai() : rawStart;
+  const result = validateTask({ ...body, child: child.nickname, startDate: requestedStart }, { today: todayInShanghai(), childNames: new Set([child.nickname]) });
   if (!result.ok) throw new ApiProblem(422, "validation", "任务不合法", result.fields);
-  const startDate = result.value.startDate ?? todayInShanghai();
+  const startDate = result.value.startDate ?? requestedStart;
   const duplicate = await findDuplicate(env, "tasks", "child_name = ? AND title = ? AND due_date = ?", [child.nickname, result.value.title, result.value.dueDate]);
   if (duplicate) throw new ApiProblem(409, "duplicate", "同样的任务已存在", undefined, { existingId: duplicate });
   const id = crypto.randomUUID();
@@ -69,7 +79,19 @@ export async function createTask(request: Request, env: Env): Promise<Response> 
       "INSERT INTO tasks (id, child_id, child_name, title, body, type, subject, due_date, start_date, completed, checked, images, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     ).bind(id, child.id, child.nickname, result.value.title, result.value.body, result.value.type, result.value.subject, result.value.dueDate, startDate, result.value.completed ? 1 : 0, result.value.checked ? 1 : 0, JSON.stringify(result.value.images), result.value.createdBy, now, now)],
     read: () => readTask(env, id),
-    expected: { title: result.value.title, dueDate: result.value.dueDate, startDate, completed: result.value.completed, childName: child.nickname },
+    expected: {
+      childName: child.nickname,
+      title: result.value.title,
+      body: result.value.body,
+      type: result.value.type,
+      subject: result.value.subject,
+      dueDate: result.value.dueDate,
+      startDate,
+      completed: result.value.completed,
+      checked: result.value.checked,
+      images: result.value.images,
+      createdBy: result.value.createdBy,
+    },
     audit: audit(auth, "create", id),
   }), 201);
 }
@@ -88,7 +110,7 @@ export async function updateTask(request: Request, env: Env): Promise<Response> 
   const duplicate = await findDuplicate(env, "tasks", "child_name = ? AND title = ? AND due_date = ?", [child.nickname, result.value.title, result.value.dueDate], id);
   if (duplicate) throw new ApiProblem(409, "duplicate", "同样的任务已存在", undefined, { existingId: duplicate });
   const now = new Date().toISOString();
-  const startDate = result.value.startDate ?? todayInShanghai();
+  const startDate = result.value.startDate;
   return json(await executeWrite(env, {
     table: "tasks",
     id,
@@ -96,7 +118,19 @@ export async function updateTask(request: Request, env: Env): Promise<Response> 
       "UPDATE tasks SET child_id = ?, child_name = ?, title = ?, body = ?, type = ?, subject = ?, due_date = ?, start_date = ?, completed = ?, checked = ?, images = ?, created_by = ?, updated_at = ? WHERE id = ?",
     ).bind(child.id, child.nickname, result.value.title, result.value.body, result.value.type, result.value.subject, result.value.dueDate, startDate, result.value.completed ? 1 : 0, result.value.checked ? 1 : 0, JSON.stringify(result.value.images), result.value.createdBy, now, id)],
     read: () => readTask(env, id),
-    expected: { title: result.value.title, dueDate: result.value.dueDate, startDate, completed: result.value.completed, checked: result.value.checked, childName: child.nickname },
+    expected: {
+      childName: child.nickname,
+      title: result.value.title,
+      body: result.value.body,
+      type: result.value.type,
+      subject: result.value.subject,
+      dueDate: result.value.dueDate,
+      startDate,
+      completed: result.value.completed,
+      checked: result.value.checked,
+      images: result.value.images,
+      createdBy: result.value.createdBy,
+    },
     audit: audit(auth, "update", id),
   }));
 }

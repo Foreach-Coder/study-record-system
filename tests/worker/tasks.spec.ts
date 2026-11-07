@@ -1,10 +1,13 @@
 import { env } from "cloudflare:workers";
 import { applyD1Migrations, SELF } from "cloudflare:test";
 import { beforeAll, describe, expect, it } from "vitest";
+import { addDays, todayInShanghai } from "../../src/shared/dates";
 
 type TestEnv = typeof env & { TEST_MIGRATIONS: { name: string; queries: string[] }[] };
 const BASE = "http://example.com";
 const HEADERS = { authorization: "Bearer test-token", "content-type": "application/json", origin: BASE };
+const TODAY = todayInShanghai();
+const DUE = addDays(TODAY, 1);
 
 beforeAll(async () => {
   await applyD1Migrations(env.DB, (env as TestEnv).TEST_MIGRATIONS);
@@ -17,19 +20,31 @@ async function create(over: Record<string, unknown> = {}) {
     headers: HEADERS,
     body: JSON.stringify({
       childId: "c1", title: "熟读拼音", body: "### 读什么\n三表", type: "作业", subject: "语文",
-      dueDate: "2026-11-08", images: [], ...over,
+      dueDate: DUE, images: [], ...over,
     }),
   });
-  return { response, body: await response.json() as { id: string; startDate: string; completed: boolean } };
+  return { response, body: await response.json() as { id: string; startDate: string; completed: boolean; [key: string]: unknown } };
 }
 
 describe("tasks", () => {
   it("creates a task, defaults startDate to today, and deduplicates", async () => {
     const first = await create();
     expect(first.response.status).toBe(201);
-    expect(first.body.startDate).toBe("2026-11-07");
+    expect(first.body.startDate).toBe(TODAY);
+    expect(first.body).toMatchObject({
+      title: "熟读拼音",
+      body: "### 读什么\n三表",
+      type: "homework",
+      subject: "语文",
+      dueDate: DUE,
+      completed: false,
+      checked: false,
+      images: [],
+      createdBy: null,
+      childName: "李律研",
+    });
     expect((await create()).response.status).toBe(409);
-    expect((await create({ dueDate: "2026-11-09" })).response.status).toBe(201);
+    expect((await create({ dueDate: addDays(TODAY, 2) })).response.status).toBe(201);
   });
 
   it("updates completion and reads it back", async () => {
@@ -40,7 +55,16 @@ describe("tasks", () => {
       body: JSON.stringify({ checked: true }),
     });
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ completed: true, checked: true });
+    expect(await response.json()).toMatchObject({
+      completed: true,
+      checked: true,
+      title: "更新测试",
+      body: "### 读什么\n三表",
+      type: "homework",
+      subject: "语文",
+      images: [],
+      createdBy: null,
+    });
   });
 
   it("deletes a task", async () => {
@@ -52,5 +76,18 @@ describe("tasks", () => {
 
   it("rejects a homework without a subject", async () => {
     expect((await create({ subject: "", title: "无科目" })).response.status).toBe(422);
+  });
+
+  it("rejects contradictory childId and child name without writing", async () => {
+    const response = await SELF.fetch(`${BASE}/api/tasks`, {
+      method: "POST",
+      headers: HEADERS,
+      body: JSON.stringify({ childId: "c1", child: "别人", title: "不一致测试", type: "作业", subject: "语文", dueDate: DUE }),
+    });
+    expect(response.status).toBe(422);
+    const body = (await response.json()) as { error: { fields: Record<string, string> } };
+    expect(body.error.fields).toMatchObject({ childName: "孩子信息不一致" });
+    const row = await env.DB.prepare("SELECT COUNT(*) AS n FROM tasks WHERE title = ?").bind("不一致测试").first<{ n: number }>();
+    expect(row?.n).toBe(0);
   });
 });
