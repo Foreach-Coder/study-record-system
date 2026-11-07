@@ -4,6 +4,7 @@ import { withSecurity } from "./http";
 import { login, logout, session } from "./routes/auth";
 import { createBehavior, deleteBehavior, updateBehavior } from "./routes/behaviors";
 import { createChild, deleteChild, updateChild } from "./routes/children";
+import { getMedia, uploadImage } from "./routes/images";
 import { importItems } from "./routes/import";
 import { getState } from "./routes/state";
 import { createTask, deleteTask, updateTask } from "./routes/tasks";
@@ -35,12 +36,20 @@ route("PATCH", "/api/behaviors/:id", updateBehavior);
 route("DELETE", "/api/behaviors/:id", deleteBehavior);
 route("GET", "/api/state", getState);
 route("POST", "/api/import", importItems);
+route("POST", "/api/images", uploadImage);
 route("POST", "/api/tasks", createTask);
 route("PATCH", "/api/tasks/:id", updateTask);
 route("DELETE", "/api/tasks/:id", deleteTask);
 
 export async function handle(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const url = new URL(request.url);
+  if (url.pathname.startsWith("/media/")) {
+    try {
+      return withSecurity(await getMedia(request, env));
+    } catch (error) {
+      return withSecurity(errorResponse(error));
+    }
+  }
   if (!(url.pathname === "/api" || url.pathname.startsWith("/api/"))) return new Response("Not found", { status: 404 });
   const matches = routes.filter((candidate) => candidate.regex.test(url.pathname));
   if (matches.length === 0) return withSecurity(json({ error: { code: "not_found", message: "接口不存在" } }, 404));
