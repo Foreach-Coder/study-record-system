@@ -1,0 +1,46 @@
+import { env } from "cloudflare:workers";
+import { applyD1Migrations, SELF } from "cloudflare:test";
+import { beforeAll, describe, expect, it } from "vitest";
+import { todayInShanghai } from "../../src/shared/dates";
+
+type TestEnv = typeof env & { TEST_MIGRATIONS: { name: string; queries: string[] }[] };
+const BASE = "http://example.com";
+const AUTH = { authorization: "Bearer test-token" };
+
+beforeAll(async () => {
+  await applyD1Migrations(env.DB, (env as TestEnv).TEST_MIGRATIONS);
+  await env.DB.batch([
+    env.DB.prepare("INSERT INTO children (id, nickname, created_at, updated_at) VALUES ('c1', '李律研', '2026-11-07T00:00:00.000Z', '2026-11-07T00:00:00.000Z')"),
+    env.DB.prepare("INSERT INTO tasks (id, child_id, child_name, title, body, type, due_date, created_at, updated_at) VALUES ('t2', 'c1', '李律研', '后', '', 'todo', '2026-11-09', '2026-11-07T00:00:00.000Z', '2026-11-07T00:00:00.000Z')"),
+    env.DB.prepare("INSERT INTO tasks (id, child_id, child_name, title, body, type, due_date, created_at, updated_at) VALUES ('t1', 'c1', '李律研', '先', '', 'todo', '2026-11-07', '2026-11-07T00:00:00.000Z', '2026-11-07T00:00:00.000Z')"),
+    env.DB.prepare("INSERT INTO behaviors (id, child_id, child_name, title, body, occurred_on, created_at, updated_at) VALUES ('b1', 'c1', '李律研', '表现', '', '2026-11-06', '2026-11-07T00:00:00.000Z', '2026-11-07T00:00:00.000Z')"),
+  ]);
+});
+
+describe("state", () => {
+  it("returns ordered state for the app", async () => {
+    const response = await SELF.fetch(`${BASE}/api/state`, { headers: AUTH });
+    expect(response.status).toBe(200);
+    const body = await response.json() as {
+      schemaVersion: number;
+      today: string;
+      serverTime: string;
+      children: { nickname: string }[];
+      tasks: { id: string }[];
+      behaviors: { id: string }[];
+    };
+    expect(body.schemaVersion).toBe(1);
+    expect(body.today).toBe(todayInShanghai());
+    expect(Number.isNaN(Date.parse(body.serverTime))).toBe(false);
+    expect(body.children.map((child) => child.nickname)).toEqual(["李律研"]);
+    expect(body.tasks.map((task) => task.id)).toEqual(["t1", "t2"]);
+    expect(body.behaviors.map((behavior) => behavior.id)).toEqual(["b1"]);
+  });
+
+  it("requires auth", async () => {
+    const response = await SELF.fetch(`${BASE}/api/state`);
+    expect(response.status).toBe(401);
+    const body = (await response.json()) as { error: { code: string } };
+    expect(body.error.code).toBe("unauthorized");
+  });
+});

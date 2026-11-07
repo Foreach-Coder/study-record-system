@@ -4,6 +4,7 @@ import { withSecurity } from "./http";
 import { login, logout, session } from "./routes/auth";
 import { createBehavior, deleteBehavior, updateBehavior } from "./routes/behaviors";
 import { createChild, deleteChild, updateChild } from "./routes/children";
+import { getState } from "./routes/state";
 import { createTask, deleteTask, updateTask } from "./routes/tasks";
 
 export type Handler = (request: Request, env: Env, ctx: ExecutionContext, params: Record<string, string>) => Promise<Response>;
@@ -31,6 +32,7 @@ route("DELETE", "/api/children/:id", deleteChild);
 route("POST", "/api/behaviors", createBehavior);
 route("PATCH", "/api/behaviors/:id", updateBehavior);
 route("DELETE", "/api/behaviors/:id", deleteBehavior);
+route("GET", "/api/state", getState);
 route("POST", "/api/tasks", createTask);
 route("PATCH", "/api/tasks/:id", updateTask);
 route("DELETE", "/api/tasks/:id", deleteTask);
