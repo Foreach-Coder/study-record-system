@@ -83,6 +83,7 @@ const SOURCE_ALIASES: Record<string, Source> = {
   "家长观察": "我的观察",
   teacher: "老师反馈",
   child: "孩子自述",
+  parent: "我的观察",
   self: "我的观察",
 };
 for (const source of SOURCES) SOURCE_ALIASES[source] = source;

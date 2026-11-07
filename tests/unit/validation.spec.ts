@@ -105,6 +105,7 @@ describe("aliases", () => {
     expect(normalizeSource("家长观察")).toBe("我的观察");
     expect(normalizeSource("teacher")).toBe("老师反馈");
     expect(normalizeSource("child")).toBe("孩子自述");
+    expect(normalizeSource("parent")).toBe("我的观察");
     expect(normalizeSource("self")).toBe("我的观察");
     expect(normalizeSource("老师反馈")).toBe("老师反馈");
   });
