@@ -115,6 +115,25 @@ describe("import", () => {
     expect(row?.n).toBe(101);
   });
 
+  it("applies the full 1000-item batch", async () => {
+    const items = Array.from({ length: 1000 }, (_, index) => taskItem({ title: `千批量-${index}` }));
+    const applied = await post(payload(items));
+    expect(applied.response.status).toBe(200);
+    expect(applied.body.verification).toEqual({ tasks: 1000, behaviors: 0 });
+    const row = await env.DB.prepare("SELECT COUNT(*) AS n FROM tasks WHERE title LIKE '千批量-%'").first<{ n: number }>();
+    expect(row?.n).toBe(1000);
+  });
+
+  it("rejects 1001 items with zero writes", async () => {
+    const items = Array.from({ length: 1001 }, (_, index) => taskItem({ title: `超限-${index}` }));
+    const rejected = await post(payload(items));
+    expect(rejected.response.status).toBe(422);
+    const body = rejected.body as { error: { fields: Record<string, string> } };
+    expect(body.error.fields).toMatchObject({ items: "items 数量必须在 1..1000" });
+    const row = await env.DB.prepare("SELECT COUNT(*) AS n FROM tasks WHERE title LIKE '超限-%'").first<{ n: number }>();
+    expect(row?.n).toBe(0);
+  });
+
   it("cleans up every chunk when readback verification fails", async () => {
     await env.DB.prepare("CREATE TRIGGER drop_verification_row AFTER INSERT ON tasks WHEN NEW.title = '核验批量-50' BEGIN DELETE FROM tasks WHERE id = NEW.id; END").run();
     try {

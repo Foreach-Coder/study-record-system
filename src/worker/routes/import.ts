@@ -9,8 +9,8 @@ import { validateBehavior, validateTask } from "../../shared/validation";
 type Kind = "task" | "behavior";
 type Bucket = "tasks" | "behaviors";
 
-// D1 每个查询最多 100 个绑定参数；单批语句数也受套餐额度约束，500 是当前导入模型的安全上限。
-const MAX_ITEMS = 500;
+// D1 每个查询最多 100 个绑定参数；1000 项 = 一批 1001 条语句，回读按 100 分块。
+const MAX_ITEMS = 1000;
 const ID_CHUNK = 100;
 
 interface Prepared {
