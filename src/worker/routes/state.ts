@@ -9,8 +9,8 @@ export async function getState(request: Request, env: Env): Promise<Response> {
   await requireAuth(request, env);
   const [children, tasks, behaviors] = await Promise.all([
     env.DB.prepare("SELECT * FROM children ORDER BY nickname ASC").all<Row>(),
-    env.DB.prepare("SELECT * FROM tasks ORDER BY due_date ASC, created_at ASC").all<Row>(),
-    env.DB.prepare("SELECT * FROM behaviors ORDER BY occurred_on DESC, created_at DESC").all<Row>(),
+    env.DB.prepare("SELECT * FROM tasks ORDER BY due_date ASC, created_at ASC, id ASC").all<Row>(),
+    env.DB.prepare("SELECT * FROM behaviors ORDER BY occurred_on DESC, created_at DESC, id DESC").all<Row>(),
   ]);
   return json({
     schemaVersion: SCHEMA_VERSION,
