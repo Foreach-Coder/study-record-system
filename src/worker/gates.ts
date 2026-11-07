@@ -49,7 +49,7 @@ export async function findDuplicate(
 }
 
 export function isUniqueViolation(error: unknown): boolean {
-  return /UNIQUE constraint failed/i.test(String(error));
+  return /unique\s+constraint\s+failed|constraint\s+failed:\s*unique/i.test(String(error));
 }
 
 export interface WriteSpec<T> {
@@ -83,6 +83,7 @@ export async function executeWrite<T extends object>(env: Env, spec: WriteSpec<T
       await env.DB.prepare(`DELETE FROM ${spec.table} WHERE id = ?`).bind(spec.id).run().catch(() => undefined);
     }
     if (error instanceof ApiProblem) throw error;
+    if (isUniqueViolation(error)) throw new ApiProblem(409, "duplicate", "记录已存在");
     throw new ApiProblem(500, "write_failed", "写入未通过回读校验", undefined, { reason: String(error) });
   }
 }
