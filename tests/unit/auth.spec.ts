@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
-  createSession, hashStoredSecret, parseCookie, verifySession, verifyStoredSecret,
+  assertCsrf, createSession, hashStoredSecret, parseCookie, verifySession, verifyStoredSecret,
 } from "../../src/worker/auth";
+import type { Env } from "../../src/worker/env";
 
 const PASSCODE = "test-passcode";
 const HASH = "sha256$MDEyMzQ1Njc4OWFiY2RlZg==$hwYMTXyyT1+b8zhK1rfNJSxvSfpEgpDKovqD/LVrClk=";
 const TOKEN_HASH = "sha256$ZmVkY2JhOTg3NjU0MzIxMA==$MmpkxPFBuFDsanou1SXTh7jKYMVi9vAAYRpLK4KoC1A=";
+
+const CSRF_ENV = { PUBLIC_ORIGIN: "https://study-record.foreach.me" } as Env;
 
 describe("auth crypto", () => {
   it("verifies the stored passcode hash and rejects a wrong one", async () => {
@@ -31,5 +34,18 @@ describe("auth crypto", () => {
   it("parses cookies", () => {
     expect(parseCookie("a=1; __Host-sr_session=abc.def", "__Host-sr_session")).toBe("abc.def");
     expect(parseCookie(null, "x")).toBeNull();
+  });
+
+  it("allows same-origin CSRF requests without an Origin header", () => {
+    const request = new Request("https://study-record.foreach.me/api/auth/logout", {
+      method: "POST",
+      headers: { "sec-fetch-site": "same-origin" },
+    });
+    expect(() => assertCsrf(request, CSRF_ENV)).not.toThrow();
+  });
+
+  it("rejects CSRF requests with neither Origin nor Sec-Fetch-Site", () => {
+    const request = new Request("https://study-record.foreach.me/api/auth/logout", { method: "POST" });
+    expect(() => assertCsrf(request, CSRF_ENV)).toThrow("csrf");
   });
 });

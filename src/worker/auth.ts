@@ -95,7 +95,10 @@ export function clearSessionCookie(request: Request): string {
 export function assertCsrf(request: Request, env: Env): void {
   if (!["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) return;
   const origin = request.headers.get("origin");
-  if (!origin) throw new Error("csrf");
+  if (!origin) {
+    if (request.headers.get("sec-fetch-site") === "same-origin") return;
+    throw new Error("csrf");
+  }
   const allowed = new Set([env.PUBLIC_ORIGIN]);
   if (isLocalRequest(request)) {
     allowed.add("http://localhost:5173");
