@@ -78,7 +78,10 @@ export async function executeWrite<T extends object>(env: Env, spec: WriteSpec<T
     }
     return actual;
   } catch (error) {
-    await env.DB.prepare(`DELETE FROM ${spec.table} WHERE id = ?`).bind(spec.id).run().catch(() => undefined);
+    // 补偿只适用于新建：更新/删除操作的目标行可能已经存在，错误时删除它会毁掉原记录。
+    if (spec.audit.action === "create") {
+      await env.DB.prepare(`DELETE FROM ${spec.table} WHERE id = ?`).bind(spec.id).run().catch(() => undefined);
+    }
     if (error instanceof ApiProblem) throw error;
     throw new ApiProblem(500, "write_failed", "写入未通过回读校验", undefined, { reason: String(error) });
   }
