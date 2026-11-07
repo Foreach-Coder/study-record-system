@@ -1,4 +1,4 @@
-import { assertCsrf, authenticate } from "../auth";
+import { requireWrite } from "../auth";
 import { readChild } from "../db";
 import type { Env } from "../env";
 import { ApiProblem, json } from "../errors";
@@ -6,13 +6,6 @@ import { assertSchema, auditStatement, executeWrite, isUniqueViolation } from ".
 import { readJson } from "../http";
 import type { Child } from "../../shared/schema";
 import { validateChild, type ChildDraft } from "../../shared/validation";
-
-async function requireWrite(request: Request, env: Env) {
-  const auth = await authenticate(request, env);
-  if (!auth) throw new ApiProblem(401, "unauthorized", "请先登录");
-  if (auth.mode === "cookie") assertCsrf(request, env);
-  return auth;
-}
 
 function idFrom(request: Request): string {
   return new URL(request.url).pathname.split("/").pop() ?? "";

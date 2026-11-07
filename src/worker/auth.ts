@@ -131,3 +131,8 @@ export async function requireAuth(request: Request, env: Env): Promise<{ mode: "
   if (!auth) throw new Error("unauthorized");
   return auth;
 }
+export async function requireWrite(request: Request, env: Env): Promise<{ mode: "cookie" | "bearer" }> {
+  const auth = await requireAuth(request, env);
+  if (auth.mode === "cookie") assertCsrf(request, env);
+  return auth;
+}

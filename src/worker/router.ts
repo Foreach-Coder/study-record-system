@@ -3,6 +3,7 @@ import { ApiProblem, errorResponse, json } from "./errors";
 import { withSecurity } from "./http";
 import { login, logout, session } from "./routes/auth";
 import { createChild, deleteChild, updateChild } from "./routes/children";
+import { createTask, deleteTask, updateTask } from "./routes/tasks";
 
 export type Handler = (request: Request, env: Env, ctx: ExecutionContext, params: Record<string, string>) => Promise<Response>;
 interface Route { method: string; regex: RegExp; keys: string[]; handler: Handler; }
@@ -26,6 +27,9 @@ route("GET", "/api/auth/session", session);
 route("POST", "/api/children", createChild);
 route("PATCH", "/api/children/:id", updateChild);
 route("DELETE", "/api/children/:id", deleteChild);
+route("POST", "/api/tasks", createTask);
+route("PATCH", "/api/tasks/:id", updateTask);
+route("DELETE", "/api/tasks/:id", deleteTask);
 
 export async function handle(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const url = new URL(request.url);
