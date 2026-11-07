@@ -4,6 +4,7 @@ import { withSecurity } from "./http";
 import { login, logout, session } from "./routes/auth";
 import { createBehavior, deleteBehavior, updateBehavior } from "./routes/behaviors";
 import { createChild, deleteChild, updateChild } from "./routes/children";
+import { importItems } from "./routes/import";
 import { getState } from "./routes/state";
 import { createTask, deleteTask, updateTask } from "./routes/tasks";
 
@@ -33,6 +34,7 @@ route("POST", "/api/behaviors", createBehavior);
 route("PATCH", "/api/behaviors/:id", updateBehavior);
 route("DELETE", "/api/behaviors/:id", deleteBehavior);
 route("GET", "/api/state", getState);
+route("POST", "/api/import", importItems);
 route("POST", "/api/tasks", createTask);
 route("PATCH", "/api/tasks/:id", updateTask);
 route("DELETE", "/api/tasks/:id", deleteTask);
