@@ -41,18 +41,22 @@ export async function hashStoredSecret(secret: string, salt: Uint8Array): Promis
   return `sha256$${toBase64(salt)}$${toBase64(await sha256(input))}`;
 }
 export async function verifyStoredSecret(secret: string, stored: string): Promise<boolean> {
-  const parsed = parseStoredSecret(stored);
-  if (!parsed) return false;
-  const actual = new Uint8Array(await sha256(
-    (() => {
-      const bytes = encoder.encode(secret);
-      const input = new Uint8Array(parsed.salt.length + bytes.length);
-      input.set(parsed.salt);
-      input.set(bytes, parsed.salt.length);
-      return input;
-    })(),
-  ));
-  return constantTimeEqual(actual, parsed.digest);
+  try {
+    const parsed = parseStoredSecret(stored);
+    if (!parsed) return false;
+    const actual = new Uint8Array(await sha256(
+      (() => {
+        const bytes = encoder.encode(secret);
+        const input = new Uint8Array(parsed.salt.length + bytes.length);
+        input.set(parsed.salt);
+        input.set(bytes, parsed.salt.length);
+        return input;
+      })(),
+    ));
+    return constantTimeEqual(actual, parsed.digest);
+  } catch {
+    return false;
+  }
 }
 export async function hmacSha256(secret: string, data: string): Promise<string> {
   const key = await crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
@@ -64,11 +68,18 @@ export async function createSession(secret: string, now = Date.now()): Promise<{
   return { token: `${payload}.${await hmacSha256(secret, payload)}`, maxAge: SESSION_TTL_SECONDS };
 }
 export async function verifySession(secret: string, token: string, now = Date.now()): Promise<boolean> {
-  const [version, exp, signature] = token.split(".");
-  if (version !== "v1" || !exp || !signature) return false;
-  if (!/^\d+$/.test(exp) || Number(exp) * 1000 < now) return false;
-  const expected = await hmacSha256(secret, `${version}.${exp}`);
-  return constantTimeEqual(fromBase64Url(signature), fromBase64Url(expected));
+  const parts = token.split(".");
+  if (parts.length !== 3) return false;
+  const [version, exp, signature] = parts;
+  if (version !== "v1" || !/^\d+$/.test(exp)) return false;
+  if (Number(exp) * 1000 < now) return false;
+  if (!/^[A-Za-z0-9_-]+$/.test(signature)) return false;
+  try {
+    const expected = await hmacSha256(secret, `${version}.${exp}`);
+    return constantTimeEqual(fromBase64Url(signature), fromBase64Url(expected));
+  } catch {
+    return false;
+  }
 }
 export function parseCookie(header: string | null, name: string): string | null {
   if (!header) return null;
@@ -93,7 +104,7 @@ export function clearSessionCookie(request: Request): string {
   return `${sessionCookieName(request)}=; HttpOnly; ${isLocalRequest(request) ? "" : "Secure; "}SameSite=Lax; Path=/; Max-Age=0`;
 }
 export function assertCsrf(request: Request, env: Env): void {
-  if (!["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) return;
+  if (!["POST", "PATCH", "DELETE"].includes(request.method)) return;
   const origin = request.headers.get("origin");
   if (!origin) {
     if (request.headers.get("sec-fetch-site") === "same-origin") return;

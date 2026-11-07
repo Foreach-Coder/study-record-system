@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  assertCsrf, createSession, hashStoredSecret, parseCookie, verifySession, verifyStoredSecret,
+  assertCsrf, authenticate, createSession, hashStoredSecret, parseCookie, verifySession, verifyStoredSecret,
 } from "../../src/worker/auth";
 import type { Env } from "../../src/worker/env";
 
@@ -47,5 +47,27 @@ describe("auth crypto", () => {
   it("rejects CSRF requests with neither Origin nor Sec-Fetch-Site", () => {
     const request = new Request("https://study-record.foreach.me/api/auth/logout", { method: "POST" });
     expect(() => assertCsrf(request, CSRF_ENV)).toThrow("csrf");
+  });
+
+  it("returns false for tampered session signatures instead of throwing", async () => {
+    expect(await verifySession("secret", "v1.4102444800.bad!", 1_700_000_000_000)).toBe(false);
+    expect(await verifySession("secret", "v1.4102444800.abc.def", 1_700_000_000_000)).toBe(false);
+  });
+
+  it("rejects malformed stored secrets", async () => {
+    expect(await verifyStoredSecret("x", "sha256$bad$bad")).toBe(false);
+  });
+
+  it("keeps cookie values containing equals signs intact", () => {
+    expect(parseCookie("a=b=c; __Host-sr_session=x", "__Host-sr_session")).toBe("x");
+    expect(parseCookie("__Host-sr_session=abc=def", "__Host-sr_session")).toBe("abc=def");
+  });
+
+  it("returns null from authenticate for a tampered session cookie", async () => {
+    const env = { SESSION_SECRET: "secret", API_TOKEN_HASH: TOKEN_HASH, PUBLIC_ORIGIN: CSRF_ENV.PUBLIC_ORIGIN } as Env;
+    const request = new Request("https://study-record.foreach.me/api/state", {
+      headers: { cookie: "__Host-sr_session=v1.4102444800.bad!" },
+    });
+    expect(await authenticate(request, env)).toBeNull();
   });
 });
