@@ -2,6 +2,7 @@ import type { Env } from "./env";
 import { ApiProblem, errorResponse, json } from "./errors";
 import { withSecurity } from "./http";
 import { login, logout, session } from "./routes/auth";
+import { createChild, deleteChild, updateChild } from "./routes/children";
 
 export type Handler = (request: Request, env: Env, ctx: ExecutionContext, params: Record<string, string>) => Promise<Response>;
 interface Route { method: string; regex: RegExp; keys: string[]; handler: Handler; }
@@ -22,6 +23,9 @@ route("GET", "/api/health", async (_request, env) => {
 route("POST", "/api/auth/login", login);
 route("POST", "/api/auth/logout", logout);
 route("GET", "/api/auth/session", session);
+route("POST", "/api/children", createChild);
+route("PATCH", "/api/children/:id", updateChild);
+route("DELETE", "/api/children/:id", deleteChild);
 
 export async function handle(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const url = new URL(request.url);
