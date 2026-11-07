@@ -12,22 +12,6 @@ const encoder = new TextEncoder();
 async function ipHash(request: Request, env: Env): Promise<string> {
   return toBase64Url(await sha256(encoder.encode(`${env.SESSION_SECRET}:${clientIp(request)}`)));
 }
-async function tooMany(env: Env, request: Request): Promise<boolean> {
-  const hash = await ipHash(request, env);
-  const windowStart = Math.floor(Date.now() / WINDOW_MS) * WINDOW_MS;
-  const row = await env.DB.prepare("SELECT failures FROM auth_attempts WHERE ip_hash = ? AND window_start = ?")
-    .bind(hash, windowStart).first<{ failures: number }>();
-  return (row?.failures ?? 0) >= MAX_FAILURES;
-}
-async function recordFailure(env: Env, request: Request): Promise<void> {
-  const hash = await ipHash(request, env);
-  const windowStart = Math.floor(Date.now() / WINDOW_MS) * WINDOW_MS;
-  await env.DB.prepare(
-    "INSERT INTO auth_attempts (ip_hash, window_start, failures) VALUES (?, ?, 1) " +
-    "ON CONFLICT(ip_hash, window_start) DO UPDATE SET failures = failures + 1",
-  ).bind(hash, windowStart).run();
-  await env.DB.prepare("DELETE FROM auth_attempts WHERE window_start < ?").bind(windowStart - 24 * 60 * 60 * 1000).run();
-}
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -36,13 +20,20 @@ export async function login(request: Request, env: Env): Promise<Response> {
   const body = await readJson(request);
   const passcode = typeof body.passcode === "string" ? body.passcode : "";
   if (!passcode) throw new ApiProblem(400, "validation", "口令必填", { passcode: "必填" });
-  if (await tooMany(env, request)) throw new ApiProblem(429, "rate_limited", "尝试过多，请稍后再试");
+  const hash = await ipHash(request, env);
+  const windowStart = Math.floor(Date.now() / WINDOW_MS) * WINDOW_MS;
+  const row = await env.DB.prepare(
+    "INSERT INTO auth_attempts (ip_hash, window_start, failures) VALUES (?, ?, 1) " +
+    "ON CONFLICT(ip_hash, window_start) DO UPDATE SET failures = failures + 1 " +
+    "RETURNING failures",
+  ).bind(hash, windowStart).first<{ failures: number }>();
+  if ((row?.failures ?? 0) > MAX_FAILURES) throw new ApiProblem(429, "rate_limited", "尝试过多，请稍后再试");
+  await env.DB.prepare("DELETE FROM auth_attempts WHERE window_start < ?").bind(windowStart - 24 * 60 * 60 * 1000).run();
   if (!(await verifyStoredSecret(passcode, env.PASSCODE_HASH))) {
-    await recordFailure(env, request);
     await delay(250);
     throw new ApiProblem(401, "invalid_passcode", "口令不对");
   }
-  await env.DB.prepare("DELETE FROM auth_attempts WHERE ip_hash = ?").bind(await ipHash(request, env)).run();
+  await env.DB.prepare("DELETE FROM auth_attempts WHERE ip_hash = ?").bind(hash).run();
   const session = await createSession(env.SESSION_SECRET);
   return new Response(null, { status: 204, headers: { "set-cookie": sessionCookie(request, session.token) } });
 }

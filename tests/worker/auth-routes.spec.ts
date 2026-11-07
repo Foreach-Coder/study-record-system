@@ -1,7 +1,6 @@
 import { env } from "cloudflare:workers";
 import { applyD1Migrations, SELF } from "cloudflare:test";
 import { beforeAll, describe, expect, it } from "vitest";
-import { sha256, toBase64Url } from "../../src/worker/auth";
 
 type TestEnv = typeof env & { TEST_MIGRATIONS: { name: string; queries: string[] }[] };
 const ORIGIN = "http://example.com";
@@ -70,18 +69,40 @@ describe("auth routes", () => {
     expect(ok.headers.get("set-cookie")).toContain("Max-Age=0");
   });
 
-  it("rate-limits after 10 failures in the window", async () => {
+  it("rate-limits after 10 failed logins in the window", { timeout: 20_000 }, async () => {
     const ip = "203.0.113.9";
-    const hash = toBase64Url(await sha256(new TextEncoder().encode(`test-session-secret:${ip}`)));
-    const windowStart = Math.floor(Date.now() / 900_000) * 900_000;
-    await env.DB.prepare(
-      "INSERT INTO auth_attempts (ip_hash, window_start, failures) VALUES (?, ?, 10)",
-    ).bind(hash, windowStart).run();
-    const response = await SELF.fetch(`${ORIGIN}/api/auth/login`, {
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const response = await SELF.fetch(`${ORIGIN}/api/auth/login`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "cf-connecting-ip": ip },
+        body: JSON.stringify({ passcode: "wrong" }),
+      });
+      expect(response.status).toBe(401);
+    }
+    const blocked = await SELF.fetch(`${ORIGIN}/api/auth/login`, {
       method: "POST",
       headers: { "content-type": "application/json", "cf-connecting-ip": ip },
       body: JSON.stringify({ passcode: PASSCODE }),
     });
-    expect(response.status).toBe(429);
+    expect(blocked.status).toBe(429);
+    expect(await blocked.json()).toMatchObject({ error: { code: "rate_limited" } });
+  });
+
+  it("returns 405 with Allow for a known path with the wrong method", async () => {
+    const response = await SELF.fetch(`${ORIGIN}/api/health`, { method: "POST" });
+    expect(response.status).toBe(405);
+    expect(response.headers.get("allow")).toBe("GET");
+    expect(response.headers.get("content-type")).toContain("application/json");
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(await response.json()).toMatchObject({ error: { code: "method_not_allowed" } });
+  });
+
+  it("returns a secured JSON 404 for the bare /api path", async () => {
+    const response = await SELF.fetch(`${ORIGIN}/api`);
+    expect(response.status).toBe(404);
+    expect(response.headers.get("content-type")).toContain("application/json");
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(response.headers.get("content-security-policy")).toBeTruthy();
+    expect(await response.json()).toMatchObject({ error: { code: "not_found" } });
   });
 });

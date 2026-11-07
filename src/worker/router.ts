@@ -25,14 +25,22 @@ route("GET", "/api/auth/session", session);
 
 export async function handle(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const url = new URL(request.url);
-  if (!url.pathname.startsWith("/api/")) return new Response("Not found", { status: 404 });
+  if (!(url.pathname === "/api" || url.pathname.startsWith("/api/"))) return new Response("Not found", { status: 404 });
   const matches = routes.filter((candidate) => candidate.regex.test(url.pathname));
   if (matches.length === 0) return withSecurity(json({ error: { code: "not_found", message: "接口不存在" } }, 404));
   const match = matches.find((candidate) => candidate.method === request.method);
-  if (!match) return withSecurity(json({ error: { code: "method_not_allowed", message: "方法不允许" } }, 405));
-  const values = match.regex.exec(url.pathname) ?? [];
-  const params = Object.fromEntries(match.keys.map((key, index) => [key, decodeURIComponent(values[index + 1] ?? "")]));
+  if (!match) {
+    const allow = [...new Set(matches.map((candidate) => candidate.method))].join(", ");
+    return withSecurity(json({ error: { code: "method_not_allowed", message: "方法不允许" } }, 405, { allow }));
+  }
   try {
+    const values = match.regex.exec(url.pathname) ?? [];
+    let params: Record<string, string>;
+    try {
+      params = Object.fromEntries(match.keys.map((key, index) => [key, decodeURIComponent(values[index + 1] ?? "")]));
+    } catch {
+      throw new ApiProblem(400, "bad_request", "路径参数编码不合法");
+    }
     return withSecurity(await match.handler(request, env, ctx, params));
   } catch (error) {
     return withSecurity(errorResponse(error));
