@@ -1,0 +1,33 @@
+{
+  "name": "study-record-system",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24.22.0" },
+  "scripts": {
+    "dev": "cf dev",
+    "build": "vue-tsc --noEmit && cf build",
+    "deploy": "npm run build && cf deploy",
+    "check": "vue-tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:cli": "python -m pytest tests/cli"
+  },
+  "dependencies": {
+    "dompurify": "^3.2.6",
+    "marked": "^12.0.2",
+    "vue": "^3.5.45"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "2.0.0-beta.v.12",
+    "@cloudflare/vitest-plugin": "^1.6.0",
+    "@cloudflare/workers-types": "^5.20261106.1",
+    "@playwright/test": "^1.65.0",
+    "@vitejs/plugin-vue": "^6.0.10",
+    "cf": "1.0.0-beta.28",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.7",
+    "vitest": "^4.1.0",
+    "vue-tsc": "^3.3.14"
+  }
+}

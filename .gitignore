@@ -1,0 +1,10 @@
+node_modules/
+.cloudflare/
+dist/
+.wrangler/
+.dev.vars
+*.log
+.DS_Store
+.backups/
+playwright-report/
+test-results/
