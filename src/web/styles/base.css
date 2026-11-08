@@ -38,3 +38,50 @@ a {
   overflow: hidden;
   clip: rect(0 0 0 0);
 }
+input,
+textarea,
+select {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--line);
+}
+img,
+svg {
+  max-width: 100%;
+}
+@media (max-width: 480px) {
+  body {
+    font-size: 15px;
+  }
+  .app-shell {
+    padding: 0 12px;
+  }
+  .app-header {
+    flex-wrap: wrap;
+  }
+  .app-header .actions {
+    width: 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+  .switcher {
+    flex-wrap: wrap;
+  }
+  .switcher select {
+    max-width: 100%;
+  }
+}
+@media (prefers-color-scheme: dark) {
+  body {
+    background: var(--bg);
+    color: var(--text);
+  }
+  input,
+  textarea,
+  select {
+    background: var(--surface-2);
+    color: var(--text);
+    border-color: var(--line);
+  }
+}
+

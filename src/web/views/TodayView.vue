@@ -6,6 +6,7 @@ import { groupTasks } from "../../shared/grouping";
 import { progress } from "../../shared/labels";
 import { api, ApiError } from "../api";
 import ProgressCard from "../components/ProgressCard.vue";
+import EmptyState from "../components/EmptyState.vue";
 import TaskGroup from "../components/TaskGroup.vue";
 import { refresh, store, todayList, visibleBehaviors, visibleTasks } from "../stores/app";
 
@@ -51,8 +52,7 @@ async function remove(task: Task) {
 <template>
   <div>
     <ProgressCard v-bind="stats" />
-    <p v-if="store.error" class="error">{{ store.error }}</p>
-    <p v-else-if="tasks.length === 0" class="empty">今天没有要做的，休息一下吧。</p>
+    <EmptyState v-if="tasks.length === 0" title="今天没有任务。" />
     <TaskGroup
       v-for="group in groups"
       :key="group.key"
@@ -74,8 +74,6 @@ async function remove(task: Task) {
 </template>
 
 <style scoped>
-.error { color: var(--danger); }
-.empty { color: var(--muted); padding: 24px 0; }
 .recent { margin-top: 28px; }
 .recent h2 { font-size: 13px; color: var(--muted); font-weight: 500; }
 .recent article { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }

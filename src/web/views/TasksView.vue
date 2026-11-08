@@ -5,6 +5,7 @@ import { groupTasks } from "../../shared/grouping";
 import type { Task } from "../../shared/schema";
 import { api, ApiError } from "../api";
 import TaskGroup from "../components/TaskGroup.vue";
+import EmptyState from "../components/EmptyState.vue";
 import { refresh, store, visibleTasks } from "../stores/app";
 
 type Filter = "all" | "homework" | "todo";
@@ -69,7 +70,7 @@ async function remove(task: Task) {
         {{ item.label }}
       </button>
     </div>
-    <p v-if="tasks.length === 0" class="empty">还没有记录。</p>
+    <EmptyState v-if="tasks.length === 0" title="还没有记录。" />
     <TaskGroup
       v-for="group in groups"
       :key="group.key"

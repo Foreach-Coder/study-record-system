@@ -3,6 +3,7 @@ import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
 import { addDays, todayInShanghai } from "../../shared/dates";
 import BehaviorCard from "../components/BehaviorCard.vue";
+import EmptyState from "../components/EmptyState.vue";
 import { visibleBehaviors } from "../stores/app";
 
 const router = useRouter();
@@ -30,7 +31,7 @@ const stats = computed(() => ({
         <option :value="90">近 90 天</option>
       </select>
     </div>
-    <p v-if="list.length === 0" class="empty">这段时间没有记录。</p>
+    <EmptyState v-if="list.length === 0" title="还没有记录。" />
     <BehaviorCard v-for="item in list" :key="item.id" :behavior="item" @open="router.push(`/behaviors/${item.id}`)" />
   </div>
 </template>

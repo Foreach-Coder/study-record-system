@@ -4,6 +4,7 @@ import { useRoute } from "vue-router";
 import AppHeader from "./components/AppHeader.vue";
 import BottomTabs from "./components/BottomTabs.vue";
 import EntrySheet from "./components/EntrySheet.vue";
+import ErrorState from "./components/ErrorState.vue";
 import { refresh, store } from "./stores/app";
 
 const route = useRoute();
@@ -18,13 +19,30 @@ watch(
   },
   { immediate: true },
 );
+
+function retry() {
+  refresh().catch(() => {
+    /* 错误已写入 store，由 ErrorState 展示 */
+  });
+}
 </script>
 
 <template>
   <RouterView v-if="route.path === '/login'" />
   <div v-else class="app-shell">
     <AppHeader :title="title" />
-    <main class="app-main"><RouterView /></main>
+    <main class="app-main">
+      <p v-if="store.loading && !store.state" class="loading" role="status">加载中…</p>
+      <ErrorState
+        v-else-if="store.error && !store.state"
+        :message="store.error"
+        @retry="retry"
+      />
+      <template v-else>
+        <p v-if="store.error" class="error-banner" role="status">{{ store.error }}</p>
+        <RouterView />
+      </template>
+    </main>
     <button type="button" class="fab behavior" aria-label="记表现" @click="sheet?.show('behavior')">表现</button>
     <button type="button" class="fab" aria-label="新增记录" @click="sheet?.show('task')">＋</button>
     <BottomTabs />
@@ -35,6 +53,8 @@ watch(
 <style scoped>
 .app-shell { max-width: 860px; margin: 0 auto; min-height: 100dvh; padding: 0 16px; display: flex; flex-direction: column; }
 .app-main { flex: 1; padding-bottom: 84px; }
+.loading { padding: 36px 0; text-align: center; color: var(--muted); }
+.error-banner { margin: 8px 0 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--danger); font-size: 13px; }
 .fab { position: fixed; right: 18px; bottom: 84px; z-index: 30; width: 56px; height: 56px; border: 0; border-radius: 50%; background: var(--accent); color: white; font-size: 26px; line-height: 1; box-shadow: 0 8px 20px rgb(0 0 0 / 18%); }
 .fab.behavior { bottom: 150px; width: 48px; height: 48px; font-size: 12px; background: var(--surface); color: var(--text); border: 1px solid var(--line); }
 </style>
