@@ -3,8 +3,9 @@ import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
 import { groupTasks } from "../../shared/grouping";
 import type { Task } from "../../shared/schema";
+import { api, ApiError } from "../api";
 import TaskGroup from "../components/TaskGroup.vue";
-import { store, visibleTasks } from "../stores/app";
+import { refresh, store, visibleTasks } from "../stores/app";
 
 type Filter = "all" | "homework" | "todo";
 
@@ -22,6 +23,37 @@ const today = computed(() => store.state?.today ?? "");
 function open(task: Task) {
   router.push(`/tasks/${task.id}`);
 }
+
+function fail(error: unknown) {
+  store.error = error instanceof ApiError ? error.message : "操作失败";
+}
+
+async function toggle(task: Task) {
+  try {
+    await api.updateTask(task.id, { completed: !task.completed });
+    await refresh();
+  } catch (error) {
+    fail(error);
+  }
+}
+
+async function check(task: Task) {
+  try {
+    await api.updateTask(task.id, { checked: !task.checked });
+    await refresh();
+  } catch (error) {
+    fail(error);
+  }
+}
+
+async function remove(task: Task) {
+  try {
+    await api.deleteTask(task.id);
+    await refresh();
+  } catch (error) {
+    fail(error);
+  }
+}
 </script>
 
 <template>
@@ -38,7 +70,16 @@ function open(task: Task) {
       </button>
     </div>
     <p v-if="tasks.length === 0" class="empty">还没有记录。</p>
-    <TaskGroup v-for="group in groups" :key="group.key" :group="group" :today="today" @open="open" />
+    <TaskGroup
+      v-for="group in groups"
+      :key="group.key"
+      :group="group"
+      :today="today"
+      @open="open"
+      @toggle="toggle"
+      @check="check"
+      @remove="remove"
+    />
   </div>
 </template>
 

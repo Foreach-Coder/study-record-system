@@ -6,7 +6,7 @@ import type { TaskGroup } from "../../shared/grouping";
 import TaskRow from "./TaskRow.vue";
 
 const props = defineProps<{ group: TaskGroup; today: string }>();
-defineEmits<{ open: [task: Task] }>();
+defineEmits<{ open: [task: Task]; toggle: [task: Task]; check: [task: Task]; remove: [task: Task] }>();
 
 const overdue = computed(() => props.group.tasks.some((task) => !task.completed && task.dueDate < props.today));
 </script>
@@ -14,7 +14,16 @@ const overdue = computed(() => props.group.tasks.some((task) => !task.completed 
 <template>
   <section class="group" :class="{ overdue }">
     <h2>{{ groupHeader(props.group, today) }}</h2>
-    <TaskRow v-for="task in group.tasks" :key="task.id" :task="task" :today="today" @open="$emit('open', $event)" />
+    <TaskRow
+      v-for="task in group.tasks"
+      :key="task.id"
+      :task="task"
+      :today="today"
+      @open="$emit('open', $event)"
+      @toggle="$emit('toggle', $event)"
+      @check="$emit('check', $event)"
+      @remove="$emit('remove', $event)"
+    />
   </section>
 </template>
 
