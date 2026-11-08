@@ -16,3 +16,5 @@ cli/spike_client.py
 .dev.vars.prod*
 .state/
 media/
+__pycache__/
+.pytest_cache/
