@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { addDays } from "../../shared/dates";
+import { todayInShanghai } from "../../shared/dates";
 import { api, ApiError } from "../api";
 import MarkdownView from "../components/MarkdownView.vue";
 import { refresh, store } from "../stores/app";
@@ -12,6 +12,8 @@ const task = computed(() => (store.state?.tasks ?? []).find((item) => item.id ==
 const pending = ref(false);
 const error = ref("");
 const confirming = ref(false);
+const today = todayInShanghai();
+const canDelay = computed(() => !!task.value && task.value.dueDate < today);
 
 function fail(reason: unknown) {
   error.value = reason instanceof ApiError ? reason.message : "操作失败，请重试";
@@ -29,6 +31,10 @@ async function update(patch: Record<string, unknown>) {
   } finally {
     pending.value = false;
   }
+}
+
+async function delayToToday() {
+  await update({ dueDate: today, startDate: today });
 }
 
 async function removeConfirmed() {
@@ -64,8 +70,8 @@ async function removeConfirmed() {
       <button type="button" :disabled="pending" @click="update({ checked: !task.checked })">
         {{ task.checked ? "取消检查" : "检查" }}
       </button>
-      <button type="button" :disabled="pending" @click="update({ startDate: addDays(task.startDate ?? task.dueDate, 1) })">
-        顺延一天
+      <button v-if="canDelay" type="button" :disabled="pending" @click="delayToToday">
+        顺延到今天
       </button>
       <button type="button" class="danger" :disabled="pending" @click="confirming = true">删除</button>
     </div>
