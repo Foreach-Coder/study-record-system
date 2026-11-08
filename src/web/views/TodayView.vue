@@ -5,13 +5,13 @@ import { groupTasks } from "../../shared/grouping";
 import { progress } from "../../shared/labels";
 import ProgressCard from "../components/ProgressCard.vue";
 import TaskGroup from "../components/TaskGroup.vue";
-import { selectedChild, store, todayList } from "../stores/app";
+import { selectedChild, store, todayList, visibleTasks } from "../stores/app";
 
 const router = useRouter();
 const today = computed(() => store.state?.today ?? "");
 const tasks = computed(() => todayList());
 const groups = computed(() => groupTasks(tasks.value));
-const stats = computed(() => today.value ? progress(tasks.value, today.value) : { total: 0, done: 0, percent: 0 });
+const stats = computed(() => today.value ? progress(visibleTasks(), today.value) : { total: 0, done: 0, percent: 0 });
 const recent = computed(() => {
   const child = selectedChild();
   return (store.state?.behaviors ?? []).filter((item) => item.childName === child?.nickname).slice(0, 3);
