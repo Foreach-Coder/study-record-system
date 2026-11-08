@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import threading
@@ -115,14 +116,27 @@ def make_plan(tmp_path, image_urls):
     return path
 
 
-def run_script(args):
+def run_script(args, env=None):
     return subprocess.run(
         [sys.executable, str(SCRIPT), *args],
         capture_output=True,
         text=True,
         encoding="utf-8",
         errors="replace",
+        env={**os.environ, **(env or {})},
     )
+
+
+def test_resize_url_transform():
+    module = load_script()
+    original = "https://static.dingtalk.com/media/a.png"
+    assert module.resize_url(original).endswith("?x-oss-process=image/resize,w_1600/quality,q_82")
+    with_query = "https://static.dingtalk.com/media/a.png?foo=1"
+    assert module.resize_url(with_query).endswith("&x-oss-process=image/resize,w_1600/quality,q_82")
+    already = "https://static.dingtalk.com/media/a.png?x-oss-process=image/resize,w_800"
+    assert module.resize_url(already) == already
+    other = "https://example.com/a.png"
+    assert module.resize_url(other) == other
 
 
 def test_unique_urls_keeps_order():
@@ -170,6 +184,8 @@ def test_apply_dedupes_uploads_and_rewrites_items(tmp_path):
                 "t",
                 "--media-dir",
                 str(tmp_path / "media"),
+                "--cache",
+                str(tmp_path / "cache.json"),
             ]
         )
         assert result.returncode == 0, result.stdout + result.stderr
@@ -208,6 +224,8 @@ def test_apply_aborts_without_import_when_upload_fails(tmp_path):
                 "t",
                 "--media-dir",
                 str(tmp_path / "media"),
+                "--cache",
+                str(tmp_path / "cache.json"),
             ]
         )
         assert result.returncode == 3, result.stdout + result.stderr
@@ -220,3 +238,95 @@ def test_apply_aborts_without_import_when_upload_fails(tmp_path):
         assert not (tmp_path / "migration.resolved.json").exists()
     finally:
         server.shutdown()
+
+
+def test_apply_rewrites_body_skips_existing_child_and_caches(tmp_path):
+    server = start_server(children=[{"nickname": "李律研"}])
+    try:
+        base = f"http://127.0.0.1:{server.server_port}"
+        url = f"{base}/img/a.png"
+        plan = {
+            "children": [{"legacyId": "child-1", "nickname": "李律研"}],
+            "items": [
+                {
+                    "kind": "task",
+                    "data": {
+                        "legacyId": "task-1",
+                        "孩子": "李律研",
+                        "标题": "口算",
+                        "正文": f"见 ![]({url}) 和 ![]({url})",
+                        "类型": "作业",
+                        "科目": "数学",
+                        "截止日": "2026-11-07",
+                        "开始日": None,
+                        "已完成": False,
+                        "已检查": False,
+                        "图片": [url],
+                        "录入人": "爸爸",
+                    },
+                }
+            ],
+            "images": [{"url": url, "recordId": "task-1", "kind": "task"}],
+            "warnings": [],
+        }
+        plan_path = tmp_path / "migration.json"
+        plan_path.write_text(json.dumps(plan, ensure_ascii=False), encoding="utf-8")
+
+        result = run_script(
+            [
+                "--plan",
+                str(plan_path),
+                "--apply",
+                "--yes",
+                "--base-url",
+                base,
+                "--token",
+                "t",
+                "--media-dir",
+                str(tmp_path / "media"),
+                "--cache",
+                str(tmp_path / "cache.json"),
+            ]
+        )
+        assert result.returncode == 0, result.stdout + result.stderr
+        paths = [path for _, path, _ in server.captured]
+        assert "/api/children" not in paths
+
+        resolved = json.loads((tmp_path / "migration.resolved.json").read_text(encoding="utf-8"))
+        body = resolved["items"][0]["data"]["正文"]
+        assert body == "见 ![](/media/images/test.jpg) 和 ![](/media/images/test.jpg)"
+        assert url not in body
+        assert resolved["items"][0]["data"]["图片"] == ["/media/images/test.jpg"]
+        assert resolved["images"][0]["url"] == "/media/images/test.jpg"
+
+        cache = json.loads((tmp_path / "cache.json").read_text(encoding="utf-8"))
+        assert cache == {url: "/media/images/test.jpg"}
+    finally:
+        server.shutdown()
+
+
+def test_apply_uses_token_from_env(tmp_path):
+    server = start_server(children=[{"nickname": "李律研"}])
+    try:
+        base = f"http://127.0.0.1:{server.server_port}"
+        plan = make_plan(tmp_path, [])
+        result = run_script(
+            [
+                "--plan",
+                str(plan),
+                "--apply",
+                "--yes",
+                "--base-url",
+                base,
+                "--media-dir",
+                str(tmp_path / "media"),
+                "--cache",
+                str(tmp_path / "cache.json"),
+            ],
+            env={"STUDY_RECORD_TOKEN": "from-env"},
+        )
+        assert result.returncode == 0, result.stdout + result.stderr
+        assert any(path == "/api/import" for _, path, _ in server.captured)
+    finally:
+        server.shutdown()
+

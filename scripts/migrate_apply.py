@@ -49,15 +49,41 @@ def request_json(base, token, method, path, payload=None):
         raise RuntimeError(f"{method} {path} -> invalid JSON") from exc
 
 
+def resize_url(url):
+    """Ask the DingTalk OSS to shrink originals before the 5 MiB Worker limit."""
+    if "static.dingtalk.com" in url and "x-oss-process" not in url:
+        sep = "&" if "?" in url else "?"
+        return f"{url}{sep}x-oss-process=image/resize,w_1600/quality,q_82"
+    return url
+
+
+def load_cache(path):
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def save_cache(path, cache):
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(cache, ensure_ascii=False, indent=2), encoding="utf-8")
+    except OSError:
+        pass
+
+
 def download(url, directory):
     digest = hashlib.sha256(url.encode("utf-8")).hexdigest()[:16]
     suffix = Path(url.split("?", 1)[0]).suffix or ".jpg"
     path = directory / f"{digest}{suffix}"
     if path.exists():
         return path
-    request = urllib.request.Request(url, headers={"user-agent": "study-record-migrate/0.1"})
+    request = urllib.request.Request(
+        resize_url(url), headers={"user-agent": "study-record-migrate/0.1"}
+    )
     try:
-        with urllib.request.urlopen(request, timeout=30) as response:
+        with urllib.request.urlopen(request, timeout=60) as response:
             path.write_bytes(response.read())
     except urllib.error.HTTPError as exc:
         raise RuntimeError(f"下载图片失败 {exc.code}: {url}") from exc
@@ -137,6 +163,11 @@ def rewrite(plan, mapping):
         urls = data.get("图片")
         if isinstance(urls, list):
             data["图片"] = [mapping.get(url, url) for url in urls]
+        body = data.get("正文")
+        if isinstance(body, str):
+            for old, new in mapping.items():
+                body = body.replace(old, new)
+            data["正文"] = body
     for image in plan.get("images") or []:
         if isinstance(image, dict) and image.get("url") in mapping:
             image["url"] = mapping[image["url"]]
@@ -158,6 +189,7 @@ def main():
     parser.add_argument("--base-url", default=DEFAULT_BASE)
     parser.add_argument("--token", default=None)
     parser.add_argument("--media-dir", default="media")
+    parser.add_argument("--cache", default=".state/migrate-images.json")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--yes", action="store_true")
@@ -190,6 +222,7 @@ def main():
     report = {
         "references": len(references),
         "unique": len(unique),
+        "cached": 0,
         "uploaded": 0,
         "failed": [],
         "children_created": 0,
@@ -204,18 +237,27 @@ def main():
 
     media = Path(args.media_dir)
     media.mkdir(parents=True, exist_ok=True)
-    mapping = {}
+    cache_path = Path(args.cache)
+    cache = load_cache(cache_path)
+    mapping = {url: cache[url] for url in unique if isinstance(cache.get(url), str)}
+    report["cached"] = len(mapping)
     for url in unique:
+        if url in mapping:
+            continue
         try:
             local = download(url, media)
             mapping[url] = upload(local, base, token)
             report["uploaded"] += 1
+            cache[url] = mapping[url]
+            save_cache(cache_path, cache)
         except Exception as exc:  # noqa: BLE001 - collect every image failure
             report["failed"].append({"url": url, "error": str(exc)})
 
     if report["failed"]:
+        save_cache(cache_path, cache)
         return fail(report, report_path, f"图片处理失败，未导入: {report['failed']}")
 
+    save_cache(cache_path, cache)
     rewrite(plan, mapping)
     resolved_path = plan_path.with_name("migration.resolved.json")
     write_json(resolved_path, plan)
