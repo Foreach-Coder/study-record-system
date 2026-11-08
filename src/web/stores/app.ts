@@ -47,7 +47,8 @@ export function visibleTasks(): Task[] {
 }
 
 export function todayList(): Task[] {
-  const today = store.state?.today ?? "";
+  const today = store.state?.today;
+  if (!today) return [];
   return todayTasks(visibleTasks(), today, computeHorizon(today));
 }
 
@@ -72,7 +73,6 @@ export async function ensureSession(): Promise<boolean> {
     store.sessionChecked = true;
     return true;
   } catch {
-    store.sessionChecked = true;
     return false;
   }
 }
