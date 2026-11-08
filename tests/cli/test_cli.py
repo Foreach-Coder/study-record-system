@@ -321,7 +321,7 @@ def test_import_maps_plan_to_child_name(tmp_path, write_server):
     assert sent["path"] == "/api/import"
     body = json.loads(sent["body"])
     assert body["mode"] == "apply"
-    assert body["onDuplicate"] == "error"
+    assert body["onDuplicate"] == "skip"
     assert [item["kind"] for item in body["items"]] == ["task", "task", "behavior"]
 
     task = body["items"][0]["data"]
@@ -380,6 +380,33 @@ def test_import_dry_run_and_skip(tmp_path, write_server):
     assert payload["tables"][0]["submitted"] == 2
 
 
+def test_import_explicit_todo_keeps_type(tmp_path, write_server):
+    base, httpd = write_server(
+        {
+            "ok": True,
+            "mode": "apply",
+            "verification": {"tasks": 1, "behaviors": 0},
+            "skipped": {"tasks": 0, "behaviors": 0},
+        }
+    )
+    plan = write_json(
+        tmp_path,
+        "day.json",
+        {
+            "child": "李律研",
+            "date": "2026-11-07",
+            "items": [{"kind": "todo", "data": {"标题": "带水杯"}}],
+        },
+    )
+    result = run(tmp_path, "import", str(plan), "--json", base=base)
+
+    assert result.returncode == 0, result.stderr
+    body = json.loads(httpd.captured[0]["body"])
+    assert body["items"][0]["data"]["type"] == "todo"
+    assert body["items"][0]["data"]["childName"] == "李律研"
+    assert json.loads(result.stdout)["tables"][0]["submitted"] == 1
+
+
 def test_import_duplicate_is_a_write_error(tmp_path, write_server):
     base, _ = write_server(
         {"error": {"code": "duplicate", "message": "重复记录"}}, status=409
@@ -428,6 +455,16 @@ def test_revise_patches_records(tmp_path, write_server):
     assert out["records"] == ["t1"]
 
 
+def test_revise_auth_error_exits_4(tmp_path, write_server):
+    base, _ = write_server(
+        {"error": {"code": "unauthorized", "message": "请先登录"}}, status=401
+    )
+    payload = {"table": "task", "items": [{"record_id": "t1", "title": "新标题"}]}
+    plan = write_json(tmp_path, "revise.json", payload)
+    result = run(tmp_path, "revise", str(plan), "--json", base=base)
+    assert result.returncode == 4
+
+
 def test_upload_image_posts_multipart(tmp_path, write_server):
     base, httpd = write_server({"url": "/media/images/abc.png", "width": 1, "height": 1})
     image = tmp_path / "one.png"
@@ -450,6 +487,16 @@ def test_upload_image_posts_multipart(tmp_path, write_server):
     assert item["url"] == f"{base}/media/images/abc.png"
     assert (item["width"], item["height"], item["bytes"]) == (1, 1, len(PNG_1X1))
     assert item["cached"] is False
+
+
+def test_upload_image_auth_error_exits_4(tmp_path, write_server):
+    base, _ = write_server(
+        {"error": {"code": "unauthorized", "message": "请先登录"}}, status=401
+    )
+    image = tmp_path / "one.png"
+    image.write_bytes(PNG_1X1)
+    result = run(tmp_path, "upload-image", str(image), "--json", base=base)
+    assert result.returncode == 4
 
 
 def test_upload_image_missing_file_reports_error(tmp_path, write_server):

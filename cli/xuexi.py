@@ -277,14 +277,14 @@ def pick(data: dict, *keys):
     return None
 
 
-def normalize_item(kind: str, data: dict, payload: dict, base: str) -> dict:
+def normalize_item(kind: str, data: dict, payload: dict, base: str, hint: str | None = None) -> dict:
     child = pick(data, "孩子", "child", "childName") or pick(payload, "child", "孩子", "student")
     by = pick(data, "录入人", "by", "createdBy") or pick(payload, "by", "录入人")
     title = pick(data, "标题", "title")
     body = pick(data, "正文", "body") or ""
     images = images_from(data, base)
     if kind == "task":
-        raw_type = str(pick(data, "类型", "type") or "作业")
+        raw_type = str(pick(data, "类型", "type") or hint or "作业")
         task_type = TASK_TYPES.get(raw_type, "homework")
         due = pick(data, "截止日", "dueDate", "due") or pick(payload, "date", "日期")
         item = {
@@ -329,10 +329,11 @@ def plan_items(payload: dict, base: str) -> list[dict]:
         for raw in explicit:
             if not isinstance(raw, dict):
                 continue
-            kind = str(raw.get("kind") or raw.get("table") or "task")
-            kind = "behavior" if kind in ("behavior", "behaviors", "表现", "行为", "在校表现") else "task"
+            raw_kind = str(raw.get("kind") or raw.get("table") or "task")
+            kind = "behavior" if raw_kind in ("behavior", "behaviors", "表现", "行为", "在校表现") else "task"
             data = raw.get("data") if isinstance(raw.get("data"), dict) else raw
-            items.append({"kind": kind, "data": normalize_item(kind, data, payload, base)})
+            hint = raw_kind if raw_kind in TASK_TYPES else None
+            items.append({"kind": kind, "data": normalize_item(kind, data, payload, base, hint)})
         return items
 
     sections = (
@@ -561,7 +562,9 @@ def cmd_revise(args, base: str, api: Api) -> int:
                 f"{path}/{urllib.parse.quote(record_id)}",
                 body=body,
             )
-        except CliError:
+        except CliError as exc:
+            if exc.code == EXIT_ENV:
+                raise
             failed += 1
             continue
         written += 1
@@ -606,6 +609,8 @@ def cmd_upload_image(args, base: str, api: Api) -> int:
                 headers={"content-type": content_type},
             ) or {}
         except CliError as exc:
+            if exc.code == EXIT_ENV:
+                raise
             errors.append({"file": path.name, "path": raw_path, "error": exc.message})
             continue
         url = str(response.get("url") or "")
@@ -651,7 +656,7 @@ def build_parser() -> argparse.ArgumentParser:
     import_cmd.add_argument("file")
     import_cmd.add_argument("--json", action="store_true")
     import_cmd.add_argument("--dry-run", action="store_true")
-    import_cmd.add_argument("--on-duplicate", choices=("error", "skip"), default="error")
+    import_cmd.add_argument("--on-duplicate", choices=("error", "skip"), default="skip")
     import_cmd.add_argument("--child")
     import_cmd.add_argument("--by")
 
