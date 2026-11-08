@@ -11,6 +11,7 @@ import argparse
 import datetime as dt
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -105,6 +106,8 @@ class Api:
                 message = self._error_message(exc.code, raw)
                 if exc.code >= 500 and not last_attempt:
                     continue
+                if exc.code >= 500:
+                    raise CliError(EXIT_ENV, message)
                 if exc.code in (401, 403):
                     raise CliError(EXIT_ENV, message)
                 if exc.code == 422:
@@ -181,10 +184,14 @@ def resolve_child(children: list[dict], preferred: str | None) -> dict:
         raise CliError(EXIT_USAGE, f"孩子不存在: {preferred}")
     if len(children) == 1:
         return children[0]
+    if not children:
+        raise CliError(EXIT_USAGE, "还没有孩子，请先在网页端添加")
     raise CliError(EXIT_USAGE, "存在多个孩子，请用 --child 指定")
 
 
 def parse_date(value: str) -> str:
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+        raise CliError(EXIT_USAGE, f"日期格式应为 YYYY-MM-DD: {value}")
     try:
         return dt.date.fromisoformat(value).isoformat()
     except ValueError:

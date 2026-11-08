@@ -1,6 +1,7 @@
 import datetime as dt
 import json
 import os
+import socket
 import subprocess
 import sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -45,6 +46,10 @@ STATE = {
 
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
+        forced = getattr(self.server, "status", None)
+        if forced:
+            self._json(forced, {"error": {"code": "forced", "message": f"forced {forced}"}})
+            return
         state = getattr(self.server, "state", STATE)
         if self.path.startswith("/api/state"):
             self._json(200, state)
@@ -69,9 +74,10 @@ class Handler(BaseHTTPRequestHandler):
 def server():
     servers = []
 
-    def start(state=STATE):
+    def start(state=STATE, status=None):
         httpd = HTTPServer(("127.0.0.1", 0), Handler)
         httpd.state = state
+        httpd.status = status
         Thread(target=httpd.serve_forever, daemon=True).start()
         servers.append(httpd)
         return f"http://127.0.0.1:{httpd.server_port}"
@@ -158,6 +164,29 @@ def test_show_rejects_unknown_child_and_bad_date(tmp_path, base):
     assert unknown.returncode == 1
     bad_date = run(tmp_path, "show", "--date", "2026-13-01", "--child", "李律研", "--json", base=base)
     assert bad_date.returncode == 1
+    compact_date = run(tmp_path, "show", "--date", "20261107", "--child", "李律研", "--json", base=base)
+    assert compact_date.returncode == 1
+
+
+def test_zero_children_is_a_usage_error(tmp_path, server):
+    result = run(tmp_path, "show", "--json", base=server({**STATE, "children": []}))
+    assert result.returncode == 1
+    assert "没有孩子" in result.stderr
+
+
+def test_http_error_exit_codes(tmp_path, server):
+    for status, expected in ((500, 4), (401, 4), (422, 2), (409, 3)):
+        result = run(tmp_path, "students", "--json", base=server(status=status))
+        assert result.returncode == expected, (status, result.stderr)
+
+
+def test_connection_refused_exits_4(tmp_path):
+    sock = socket.socket()
+    sock.bind(("127.0.0.1", 0))
+    port = sock.getsockname()[1]
+    sock.close()
+    result = run(tmp_path, "students", "--json", base=f"http://127.0.0.1:{port}")
+    assert result.returncode == 4
 
 
 def test_students_returns_spec_shape(tmp_path, base):
