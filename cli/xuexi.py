@@ -61,8 +61,8 @@ def load_config(args) -> tuple[str, str, str | None, str | None]:
 
     base = args.base_url or os.environ.get("STUDY_RECORD_BASE_URL") or data.get("baseUrl") or DEFAULT_BASE
     token = args.token or os.environ.get("STUDY_RECORD_TOKEN") or data.get("token")
-    child = args.child or data.get("child")
-    by = args.by or data.get("by")
+    child = getattr(args, "child", None) or data.get("child")
+    by = getattr(args, "by", None) or data.get("by")
     if not token:
         raise CliError(EXIT_ENV, "缺少 token：--token、STUDY_RECORD_TOKEN 或配置文件")
     return str(base).rstrip("/"), str(token), child, by
@@ -633,6 +633,147 @@ def cmd_upload_image(args, base: str, api: Api) -> int:
     return EXIT_OK if not errors else EXIT_WRITE
 
 
+def selected_child(state: dict, args) -> dict:
+    return resolve_child(state.get("children") or [], args.child)
+
+
+def child_tasks(state: dict, nickname: str) -> list[dict]:
+    return [
+        task for task in state.get("tasks") or []
+        if task.get("childName") == nickname
+    ]
+
+
+def completion_targets(args, state: dict) -> list[str]:
+    nickname = selected_child(state, args).get("nickname")
+    rows = child_tasks(state, nickname)
+    if sum(1 for value in (args.record_id, args.find, args.all) if value) > 1:
+        raise CliError(EXIT_USAGE, "record_id、--find、--all 只能选一个")
+    if args.record_id:
+        return [str(args.record_id)]
+    if args.find:
+        matches = [task for task in rows if args.find in str(task.get("title") or "")]
+        if len(matches) != 1:
+            raise CliError(
+                EXIT_USAGE, f"--find「{args.find}」需要恰好匹配一条，实际匹配 {len(matches)} 条"
+            )
+        return [str(matches[0]["id"])]
+    if args.all:
+        want_completed = bool(args.undo)
+        return [
+            str(task["id"]) for task in rows
+            if bool(task.get("completed")) == want_completed
+        ]
+    raise CliError(EXIT_USAGE, "要给一个 record_id，或者用 --find / --all")
+
+
+def cmd_completion(args, base: str, api: Api, also_check: bool) -> int:
+    if args.record_id and not args.find and not args.all:
+        ids = [str(args.record_id)]
+    else:
+        state = api.get("/api/state") or {}
+        ids = completion_targets(args, state)
+    completed = not args.undo
+    checked = not args.undo
+    if not args.dry_run:
+        for record_id in ids:
+            body = {"completed": completed}
+            if also_check:
+                body = {"checked": checked, "completed": completed}
+            api.request(
+                "PATCH",
+                f"/api/tasks/{urllib.parse.quote(record_id)}",
+                body=body,
+            )
+    payload = {
+        "ok": True,
+        "record_id": ids[0] if len(ids) == 1 else None,
+        "completed": completed,
+    }
+    if also_check:
+        payload["checked"] = checked
+    payload["dry_run"] = bool(args.dry_run)
+    if args.json:
+        print(json.dumps(payload, ensure_ascii=False))
+    else:
+        step = "检查" if also_check else "完成"
+        prefix = "[dry-run] 会" if args.dry_run else "已"
+        print(f"{prefix}{step} {len(ids)} 条")
+    return EXIT_OK
+
+
+def cmd_pending(args, base: str, api: Api) -> int:
+    state = api.get("/api/state") or {}
+    child = selected_child(state, args)
+    rows = [
+        task for task in child_tasks(state, child.get("nickname"))
+        if not task.get("completed")
+    ]
+    rows.sort(key=lambda task: task.get("dueDate") or "9999")
+    payload = {"ok": True, "tasks": [task_json(base, task) for task in rows]}
+    if args.json:
+        print(json.dumps(payload, ensure_ascii=False))
+    else:
+        print(f"{child.get('nickname')} · 未完成 {len(rows)} 条")
+        for task in rows:
+            print(f"  {task.get('dueDate')} {task.get('title')}")
+    return EXIT_OK
+
+
+def cmd_daily(args, base: str, api: Api) -> int:
+    date = parse_date(args.date)
+    state = api.get("/api/state") or {}
+    child = selected_child(state, args)
+    nickname = child.get("nickname")
+    tasks = [
+        task for task in child_tasks(state, nickname)
+        if task.get("dueDate") == date
+    ]
+    behaviors = [
+        item for item in state.get("behaviors") or []
+        if item.get("occurredOn") == date and item.get("childName") == nickname
+    ]
+    done = sum(1 for task in tasks if task.get("completed"))
+    lines = [f"# {date} 学习记录", "", f"- 任务 {len(tasks)} 个，完成 {done} 个"]
+    for task in tasks:
+        mark = "x" if task.get("completed") else " "
+        lines.append(
+            f"- [{mark}] {task.get('childName')} · {task.get('title')}（{task.get('dueDate')}）"
+        )
+    if behaviors:
+        lines += ["", "## 在校表现"]
+        for item in behaviors:
+            lines.append(f"- {item.get('childName')} · {item.get('title')}：{item.get('body') or ''}")
+    markdown = "\n".join(lines)
+    if args.json:
+        print(json.dumps({"ok": True, "date": date, "markdown": markdown}, ensure_ascii=False))
+    else:
+        print(markdown)
+    return EXIT_OK
+
+
+def cmd_doctor(args, base: str, api: Api) -> int:
+    health = api.get("/api/health") or {}
+    state = api.get("/api/state") or {}
+    ok = bool(health.get("ok"))
+    payload = {
+        "ok": ok,
+        "schemaVersion": state.get("schemaVersion"),
+        "children": len(state.get("children") or []),
+        "tasks": len(state.get("tasks") or []),
+        "behaviors": len(state.get("behaviors") or []),
+        "baseUrl": base,
+        "configPath": str(config_path()),
+    }
+    if args.json:
+        print(json.dumps(payload, ensure_ascii=False))
+    else:
+        print(f"{'✓' if ok else '✗'} {base}")
+        print(f"  schemaVersion={payload['schemaVersion']}")
+        print(f"  孩子 {payload['children']} · 任务 {payload['tasks']} · 表现 {payload['behaviors']}")
+    return EXIT_OK if ok else EXIT_ENV
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="xuexi.py")
     parser.add_argument("--base-url")
@@ -672,6 +813,31 @@ def build_parser() -> argparse.ArgumentParser:
     upload.add_argument("--json", action="store_true")
     upload.add_argument("--child")
     upload.add_argument("--by")
+
+    for name in ("done", "checked"):
+        command = sub.add_parser(name)
+        command.add_argument("record_id", nargs="?", default=None)
+        command.add_argument("--find", default=None)
+        command.add_argument("--all", action="store_true")
+        command.add_argument("--dry-run", action="store_true")
+        command.add_argument("--undo", action="store_true")
+        command.add_argument("--json", action="store_true")
+        command.add_argument("--child")
+        command.add_argument("--by")
+
+    pending = sub.add_parser("pending")
+    pending.add_argument("--json", action="store_true")
+    pending.add_argument("--child")
+    pending.add_argument("--by")
+
+    daily = sub.add_parser("daily")
+    daily.add_argument("--date", default=None)
+    daily.add_argument("--json", action="store_true")
+    daily.add_argument("--child")
+    daily.add_argument("--by")
+
+    doctor = sub.add_parser("doctor")
+    doctor.add_argument("--json", action="store_true")
     return parser
 
 
@@ -681,7 +847,7 @@ def main(argv=None) -> int:
     except SystemExit as exc:
         return EXIT_USAGE if exc.code else EXIT_OK
     try:
-        if args.command == "show" and args.date is None:
+        if args.command in ("show", "daily") and args.date is None:
             args.date = today_shanghai()
         base, token, config_child, config_by = load_config(args)
         args.child = getattr(args, "child", None) or getattr(args, "global_child", None) or config_child
@@ -699,6 +865,16 @@ def main(argv=None) -> int:
             return cmd_revise(args, base, api)
         if args.command == "upload-image":
             return cmd_upload_image(args, base, api)
+        if args.command == "done":
+            return cmd_completion(args, base, api, also_check=False)
+        if args.command == "checked":
+            return cmd_completion(args, base, api, also_check=True)
+        if args.command == "pending":
+            return cmd_pending(args, base, api)
+        if args.command == "daily":
+            return cmd_daily(args, base, api)
+        if args.command == "doctor":
+            return cmd_doctor(args, base, api)
         raise CliError(EXIT_USAGE, f"未知命令: {args.command}")
     except CliError as exc:
         print(json.dumps({"ok": False, "error": exc.message}, ensure_ascii=False), file=sys.stderr)

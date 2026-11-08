@@ -54,7 +54,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.path.startswith("/api/state"):
             self._json(200, state)
         elif self.path.startswith("/api/health"):
-            self._json(200, {"ok": True, "d1": True})
+            self._json(200, getattr(self.server, "health", None) or {"ok": True, "d1": True})
         else:
             self._json(404, {"error": {"code": "not_found", "message": "nope"}})
 
@@ -74,10 +74,11 @@ class Handler(BaseHTTPRequestHandler):
 def server():
     servers = []
 
-    def start(state=STATE, status=None):
+    def start(state=STATE, status=None, health=None):
         httpd = HTTPServer(("127.0.0.1", 0), Handler)
         httpd.state = state
         httpd.status = status
+        httpd.health = health
         Thread(target=httpd.serve_forever, daemon=True).start()
         servers.append(httpd)
         return f"http://127.0.0.1:{httpd.server_port}"
@@ -249,6 +250,14 @@ PNG_1X1 = (
 
 
 class WriteHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path.startswith("/api/state"):
+            self._json(200, getattr(self.server, "state", STATE))
+        elif self.path.startswith("/api/health"):
+            self._json(200, getattr(self.server, "health", None) or {"ok": True, "d1": True})
+        else:
+            self._json(404, {"error": {"code": "not_found", "message": "nope"}})
+
     def do_POST(self):
         self._capture()
 
@@ -284,11 +293,12 @@ class WriteHandler(BaseHTTPRequestHandler):
 def write_server():
     servers = []
 
-    def start(reply, status=200):
+    def start(reply, status=200, state=STATE):
         httpd = HTTPServer(("127.0.0.1", 0), WriteHandler)
         httpd.captured = []
         httpd.reply = reply
         httpd.status = status
+        httpd.state = state
         Thread(target=httpd.serve_forever, daemon=True).start()
         servers.append(httpd)
         return f"http://127.0.0.1:{httpd.server_port}", httpd
@@ -506,3 +516,122 @@ def test_upload_image_missing_file_reports_error(tmp_path, write_server):
     payload = json.loads(result.stdout)
     assert payload["ok"] is False
     assert payload["errors"]
+
+
+def test_done_patches_task(tmp_path, write_server):
+    base, httpd = write_server({"ok": True})
+    result = run(tmp_path, "done", "t1", "--json", base=base)
+
+    assert result.returncode == 0, result.stderr
+    sent = httpd.captured[0]
+    assert sent["method"] == "PATCH"
+    assert sent["path"] == "/api/tasks/t1"
+    assert json.loads(sent["body"]) == {"completed": True}
+    out = json.loads(result.stdout)
+    assert out["ok"] is True
+    assert out["record_id"] == "t1"
+    assert out["completed"] is True
+    assert out["dry_run"] is False
+
+
+def test_checked_sets_checked_and_completed(tmp_path, write_server):
+    base, httpd = write_server({"ok": True})
+    result = run(tmp_path, "checked", "t1", "--json", base=base)
+
+    assert result.returncode == 0, result.stderr
+    assert json.loads(httpd.captured[0]["body"]) == {"checked": True, "completed": True}
+    out = json.loads(result.stdout)
+    assert out["checked"] is True
+    assert out["completed"] is True
+
+
+def test_done_find_resolves_one_task(tmp_path, write_server, server):
+    base, httpd = write_server({"ok": True})
+    result = run(tmp_path, "done", "--find", "数学", "--child", "李律研", "--json", base=base)
+    assert result.returncode == 0, result.stderr
+    assert [sent["path"] for sent in httpd.captured] == ["/api/tasks/t1"]
+    duplicate = {**STATE, "tasks": [TASK, {**TASK, "id": "t9"}]}
+    ambiguous = run(
+        tmp_path, "done", "--find", "数学", "--child", "李律研", "--json", base=server(duplicate)
+    )
+    assert ambiguous.returncode == 1
+
+
+def test_done_all_marks_incomplete_tasks(tmp_path, write_server):
+    base, httpd = write_server({"ok": True})
+    result = run(tmp_path, "done", "--all", "--child", "李律研", "--json", base=base)
+    assert result.returncode == 0, result.stderr
+    assert [sent["path"] for sent in httpd.captured] == ["/api/tasks/t1", "/api/tasks/t2"]
+    assert all(json.loads(sent["body"]) == {"completed": True} for sent in httpd.captured)
+
+
+def test_done_dry_run_does_not_patch(tmp_path, write_server):
+    base, httpd = write_server({"ok": True})
+    result = run(tmp_path, "done", "t1", "--dry-run", "--json", base=base)
+    assert result.returncode == 0, result.stderr
+    assert httpd.captured == []
+    out = json.loads(result.stdout)
+    assert out["dry_run"] is True
+    assert out["completed"] is True
+
+
+def test_done_undo_reverses_completion(tmp_path, write_server):
+    base, httpd = write_server({"ok": True})
+    result = run(tmp_path, "done", "t1", "--undo", "--json", base=base)
+    assert result.returncode == 0, result.stderr
+    assert json.loads(httpd.captured[0]["body"]) == {"completed": False}
+    assert json.loads(result.stdout)["completed"] is False
+
+
+def test_done_auth_error_exits_4(tmp_path, write_server):
+    base, _ = write_server(
+        {"error": {"code": "unauthorized", "message": "请先登录"}}, status=401
+    )
+    result = run(tmp_path, "done", "t1", "--json", base=base)
+    assert result.returncode == 4
+
+
+def test_pending_lists_incomplete_tasks_for_child(tmp_path, base):
+    result = run(tmp_path, "pending", "--child", "李律研", "--json", base=base)
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert [task["record_id"] for task in payload["tasks"]] == ["t1", "t2"]
+    first = payload["tasks"][0]
+    assert first["标题"] == "数学口算"
+    assert first["类型"] == "作业"
+    assert first["孩子"] == "李律研"
+
+
+def test_daily_renders_selected_child_markdown(tmp_path, base):
+    result = run(
+        tmp_path, "daily", "--date", "2026-11-07", "--child", "李律研", "--json", base=base
+    )
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert payload["date"] == "2026-11-07"
+    markdown = payload["markdown"]
+    assert markdown.startswith("# 2026-11-07 学习记录")
+    assert "- 任务 1 个，完成 0 个" in markdown
+    assert "- [ ] 李律研 · 数学口算（2026-11-07）" in markdown
+    assert "## 在校表现" in markdown
+    assert "李律研 · 主动帮同学：帮同学捡笔" in markdown
+
+
+def test_doctor_reports_state(tmp_path, base):
+    result = run(tmp_path, "doctor", "--json", base=base)
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert payload["schemaVersion"] == 1
+    assert (payload["children"], payload["tasks"], payload["behaviors"]) == (2, 3, 2)
+    assert payload["baseUrl"] == base
+    assert payload["configPath"].endswith("missing.json")
+    assert "token" not in json.dumps(payload)
+
+
+def test_doctor_unhealthy_exits_4(tmp_path, server):
+    base = server(health={"ok": False, "d1": False})
+    result = run(tmp_path, "doctor", "--json", base=base)
+    assert result.returncode == 4
