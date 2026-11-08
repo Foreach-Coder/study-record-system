@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """study-record CLI: 学习记录系统的命令行客户端。
 
-Task 25 只实现基础能力：`show` 与 `students`。后续任务会加入
-`import` / `revise` / `upload-image` 等命令。
+支持 `show` / `students` / `import` / `revise` / `upload-image`。
 """
 
 from __future__ import annotations
@@ -12,9 +11,12 @@ import datetime as dt
 import json
 import os
 import re
+import struct
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
+import uuid
 from pathlib import Path
 
 EXIT_OK, EXIT_USAGE, EXIT_VALIDATION, EXIT_WRITE, EXIT_ENV = 0, 1, 2, 3, 4
@@ -79,14 +81,25 @@ class Api:
         self.base = base
         self.token = token
 
-    def request(self, method: str, path: str, retry: bool = False):
+    def request(self, method: str, path: str, retry: bool = False, body=None, headers=None):
+        request_headers = {
+            "accept": "application/json",
+            "user-agent": USER_AGENT,
+            "authorization": f"Bearer {self.token}",
+        }
+        data = None
+        if isinstance(body, dict):
+            data = json.dumps(body, ensure_ascii=False).encode("utf-8")
+            request_headers["content-type"] = "application/json"
+        elif isinstance(body, (bytes, bytearray)):
+            data = bytes(body)
+        if headers:
+            for key, value in headers.items():
+                request_headers[str(key).lower()] = str(value)
         request = urllib.request.Request(
             f"{self.base}{path}",
-            headers={
-                "accept": "application/json",
-                "user-agent": USER_AGENT,
-                "authorization": f"Bearer {self.token}",
-            },
+            data=data,
+            headers=request_headers,
             method=method,
         )
         attempts = 2 if retry else 1
@@ -198,6 +211,217 @@ def parse_date(value: str) -> str:
         raise CliError(EXIT_USAGE, f"日期格式应为 YYYY-MM-DD: {value}")
 
 
+def load_json_file(path: str) -> dict:
+    try:
+        raw = Path(path).read_text(encoding="utf-8")
+    except OSError as exc:
+        raise CliError(EXIT_USAGE, f"无法读取文件 {path}: {exc}")
+    try:
+        payload = json.loads(raw)
+    except ValueError as exc:
+        raise CliError(EXIT_USAGE, f"文件不是合法 JSON: {exc}")
+    if not isinstance(payload, dict):
+        raise CliError(EXIT_USAGE, "文件顶层必须是 JSON 对象")
+    return payload
+
+
+TASK_TYPES = {
+    "作业": "homework",
+    "功课": "homework",
+    "homework": "homework",
+    "待办": "todo",
+    "任务": "todo",
+    "todo": "todo",
+}
+
+
+def relative_media(base: str, url: str) -> str:
+    if url.startswith(base):
+        url = url[len(base):]
+    if url.startswith("http://") or url.startswith("https://"):
+        return url
+    if not url.startswith("/"):
+        url = "/" + url
+    return url
+
+
+def images_from(data: dict, base: str) -> list[dict]:
+    raw = data.get("图片", data.get("images"))
+    images = []
+    if isinstance(raw, dict):
+        image = raw.get("image")
+        if isinstance(image, dict):
+            images = image.get("images") or []
+        else:
+            images = raw.get("images") or []
+    elif isinstance(raw, list):
+        images = raw
+    result = []
+    for entry in images or []:
+        if isinstance(entry, dict):
+            url = entry.get("imageUrl") or entry.get("url")
+            title = entry.get("title")
+        else:
+            url, title = entry, None
+        if not url:
+            continue
+        result.append({"url": relative_media(base, str(url)), "title": title})
+    return result
+
+
+def pick(data: dict, *keys):
+    for key in keys:
+        value = data.get(key)
+        if value not in (None, ""):
+            return value
+    return None
+
+
+def normalize_item(kind: str, data: dict, payload: dict, base: str) -> dict:
+    child = pick(data, "孩子", "child", "childName") or pick(payload, "child", "孩子", "student")
+    by = pick(data, "录入人", "by", "createdBy") or pick(payload, "by", "录入人")
+    title = pick(data, "标题", "title")
+    body = pick(data, "正文", "body") or ""
+    images = images_from(data, base)
+    if kind == "task":
+        raw_type = str(pick(data, "类型", "type") or "作业")
+        task_type = TASK_TYPES.get(raw_type, "homework")
+        due = pick(data, "截止日", "dueDate", "due") or pick(payload, "date", "日期")
+        item = {
+            "childName": child,
+            "title": title,
+            "body": body,
+            "type": task_type,
+            "dueDate": due,
+            "completed": bool(data.get("已完成", data.get("completed", False))),
+            "checked": bool(data.get("已检查", data.get("checked", False))),
+            "images": images,
+        }
+        subject = pick(data, "科目", "subject")
+        if subject is not None:
+            item["subject"] = subject
+        start = pick(data, "开始日", "startDate", "start")
+        if start is not None:
+            item["startDate"] = start
+    else:
+        item = {
+            "childName": child,
+            "title": title,
+            "body": body,
+            "occurredOn": pick(data, "日期", "occurredOn", "date") or pick(payload, "date", "日期"),
+            "images": images,
+        }
+        for source, target in (("维度", "dimension"), ("dimension", "dimension"),
+                               ("档位", "tone"), ("tone", "tone"),
+                               ("来源", "source"), ("source", "source")):
+            value = data.get(source)
+            if value not in (None, ""):
+                item[target] = value
+    if by is not None:
+        item["createdBy"] = by
+    return item
+
+
+def plan_items(payload: dict, base: str) -> list[dict]:
+    items: list[dict] = []
+    explicit = payload.get("items")
+    if isinstance(explicit, list):
+        for raw in explicit:
+            if not isinstance(raw, dict):
+                continue
+            kind = str(raw.get("kind") or raw.get("table") or "task")
+            kind = "behavior" if kind in ("behavior", "behaviors", "表现", "行为", "在校表现") else "task"
+            data = raw.get("data") if isinstance(raw.get("data"), dict) else raw
+            items.append({"kind": kind, "data": normalize_item(kind, data, payload, base)})
+        return items
+
+    sections = (
+        ("homework", "task", "homework"),
+        ("作业", "task", "homework"),
+        ("todo", "task", "todo"),
+        ("待办", "task", "todo"),
+        ("behavior", "behavior", None),
+        ("behaviors", "behavior", None),
+        ("行为", "behavior", None),
+        ("表现", "behavior", None),
+        ("在校表现", "behavior", None),
+    )
+    for section, kind, forced in sections:
+        value = payload.get(section)
+        if value is None:
+            continue
+        records = value if isinstance(value, list) else [value]
+        for record in records:
+            if not isinstance(record, dict):
+                continue
+            data = dict(record)
+            if kind == "task" and forced and pick(data, "类型", "type") is None:
+                data["类型"] = "作业" if forced == "homework" else "待办"
+            items.append({"kind": kind, "data": normalize_item(kind, data, payload, base)})
+    return items
+
+
+def media_type(path: Path) -> str:
+    return {
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".webp": "image/webp",
+        ".gif": "image/gif",
+    }.get(path.suffix.lower(), "application/octet-stream")
+
+
+def image_size(data: bytes) -> tuple[int, int]:
+    try:
+        if data[:8] == b"\x89PNG\r\n\x1a\n" and len(data) >= 24:
+            width, height = struct.unpack(">II", data[16:24])
+            return int(width), int(height)
+        if data[:2] == b"\xff\xd8":
+            index = 2
+            while index + 9 < len(data):
+                if data[index] != 0xFF:
+                    index += 1
+                    continue
+                marker = data[index + 1]
+                if marker in (0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7,
+                              0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF):
+                    height, width = struct.unpack(">HH", data[index + 5:index + 9])
+                    return int(width), int(height)
+                size = struct.unpack(">H", data[index + 2:index + 4])[0]
+                index += 2 + size
+        if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+            chunk = data[12:16]
+            if chunk == b"VP8X" and len(data) >= 30:
+                return (int.from_bytes(data[24:27], "little") + 1,
+                        int.from_bytes(data[27:30], "little") + 1)
+            if chunk == b"VP8 " and len(data) >= 30:
+                return (int.from_bytes(data[26:28], "little") & 0x3FFF,
+                        int.from_bytes(data[28:30], "little") & 0x3FFF)
+            if chunk == b"VP8L" and len(data) >= 25:
+                bits = int.from_bytes(data[21:25], "little")
+                return (bits & 0x3FFF) + 1, ((bits >> 14) & 0x3FFF) + 1
+    except (struct.error, IndexError):
+        pass
+    return 0, 0
+
+
+def multipart_body(fields: dict, name: str, filename: str, data: bytes, content_type: str):
+    boundary = "----xuexi" + uuid.uuid4().hex
+    parts = []
+    for key, value in fields.items():
+        parts.append(
+            f'--{boundary}\r\nContent-Disposition: form-data; name="{key}"\r\n\r\n{value}\r\n'.encode()
+        )
+    parts.append(
+        f'--{boundary}\r\nContent-Disposition: form-data; name="{name}"; filename="{filename}"\r\n'
+        f"Content-Type: {content_type}\r\n\r\n".encode()
+        + data
+        + b"\r\n"
+    )
+    parts.append(f"--{boundary}--\r\n".encode())
+    return b"".join(parts), f"multipart/form-data; boundary={boundary}"
+
+
 def cmd_show(args, base: str, api: Api) -> None:
     date = parse_date(args.date)
     state = api.get("/api/state") or {}
@@ -243,6 +467,167 @@ def cmd_students(args, base: str, api: Api) -> None:
             print(student["name"])
 
 
+def import_tables(items: list[dict], response: dict, dry_run: bool) -> list[dict]:
+    verification = response.get("verification") or {}
+    skipped = response.get("skipped") or {}
+    tables = []
+    for kind, table, label, key in (
+        ("task", "task", "作业", "tasks"),
+        ("behavior", "behavior", "在校表现", "behaviors"),
+    ):
+        submitted = sum(1 for item in items if item["kind"] == kind)
+        verified = 0 if dry_run else int(verification.get(key) or 0)
+        tables.append(
+            {
+                "table": table,
+                "label": label,
+                "submitted": submitted,
+                "written": verified,
+                "verified": verified,
+                "skipped": int(skipped.get(key) or 0),
+                "failed": 0,
+                "unverified": 0,
+                "records": [],
+            }
+        )
+    return tables
+
+
+def cmd_import(args, base: str, api: Api) -> int:
+    plan = load_json_file(args.file)
+    items = plan_items(plan, base)
+    dry_run = bool(args.dry_run)
+    body = {
+        "mode": "dry-run" if dry_run else "apply",
+        "onDuplicate": args.on_duplicate,
+        "items": items,
+    }
+    response = api.request("POST", "/api/import", body=body) or {}
+    payload = {
+        "dry_run": dry_run,
+        "ok": bool(response.get("ok", True)),
+        "student": pick(plan, "child", "孩子", "student"),
+        "date": pick(plan, "date", "日期") or today_shanghai(),
+        "tables": import_tables(items, response, dry_run),
+    }
+    if args.json:
+        print(json.dumps(payload, ensure_ascii=False))
+    else:
+        for table in payload["tables"]:
+            print(f"{table['label']}: 提交 {table['submitted']}，写入 {table['written']}，跳过 {table['skipped']}")
+    return EXIT_OK
+
+
+REVISE_FIELDS = (
+    ("title", "title"),
+    ("body", "body"),
+    ("subject", "subject"),
+    ("due", "dueDate"),
+    ("dueDate", "dueDate"),
+    ("截止日", "dueDate"),
+    ("start", "startDate"),
+    ("startDate", "startDate"),
+    ("开始日", "startDate"),
+)
+
+
+def cmd_revise(args, base: str, api: Api) -> int:
+    payload = load_json_file(args.file)
+    table = args.table or payload.get("table") or "task"
+    table = "behavior" if table in ("behavior", "行为", "表现", "在校表现", "behaviors") else "task"
+    items = payload.get("items") or []
+    if not isinstance(items, list):
+        raise CliError(EXIT_USAGE, "items 必须是数组")
+    label = "作业" if table == "task" else "在校表现"
+    path = "/api/tasks" if table == "task" else "/api/behaviors"
+    written = 0
+    failed = 0
+    records = []
+    for item in items:
+        if not isinstance(item, dict) or not item.get("record_id"):
+            failed += 1
+            continue
+        body = {}
+        for source, target in REVISE_FIELDS:
+            value = item.get(source)
+            if value is not None:
+                body[target] = value
+        if table == "behavior":
+            body = {key: value for key, value in body.items() if key in ("title", "body")}
+        record_id = str(item["record_id"])
+        try:
+            api.request(
+                "PATCH",
+                f"{path}/{urllib.parse.quote(record_id)}",
+                body=body,
+            )
+        except CliError:
+            failed += 1
+            continue
+        written += 1
+        records.append(record_id)
+    out = {
+        "ok": failed == 0,
+        "table": table,
+        "label": label,
+        "submitted": len(items),
+        "written": written,
+        "verified": written,
+        "failed": failed,
+        "unverified": 0,
+        "records": records,
+    }
+    if args.json:
+        print(json.dumps(out, ensure_ascii=False))
+    else:
+        print(f"{label}: 提交 {out['submitted']}，写入 {written}，失败 {failed}")
+    return EXIT_OK if failed == 0 else EXIT_WRITE
+
+
+def cmd_upload_image(args, base: str, api: Api) -> int:
+    images = []
+    errors = []
+    for raw_path in args.paths:
+        path = Path(raw_path)
+        try:
+            data = path.read_bytes()
+        except OSError as exc:
+            errors.append({"file": path.name, "path": raw_path, "error": str(exc)})
+            continue
+        width, height = image_size(data)
+        body, content_type = multipart_body(
+            {"width": width, "height": height}, "file", path.name, data, media_type(path)
+        )
+        try:
+            response = api.request(
+                "POST",
+                "/api/images",
+                body=body,
+                headers={"content-type": content_type},
+            ) or {}
+        except CliError as exc:
+            errors.append({"file": path.name, "path": raw_path, "error": exc.message})
+            continue
+        url = str(response.get("url") or "")
+        images.append(
+            {
+                "file": path.name,
+                "path": raw_path,
+                "url": absolute_media(base, url),
+                "width": int(response.get("width") or width),
+                "height": int(response.get("height") or height),
+                "bytes": len(data),
+                "cached": False,
+            }
+        )
+    payload = {"ok": not errors, "images": images, "errors": errors}
+    if args.json:
+        print(json.dumps(payload, ensure_ascii=False))
+    else:
+        print(f"上传 {len(images)} 张，失败 {len(errors)} 张")
+    return EXIT_OK if not errors else EXIT_WRITE
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="xuexi.py")
     parser.add_argument("--base-url")
@@ -261,6 +646,27 @@ def build_parser() -> argparse.ArgumentParser:
     students.add_argument("--json", action="store_true")
     students.add_argument("--child")
     students.add_argument("--by")
+
+    import_cmd = sub.add_parser("import")
+    import_cmd.add_argument("file")
+    import_cmd.add_argument("--json", action="store_true")
+    import_cmd.add_argument("--dry-run", action="store_true")
+    import_cmd.add_argument("--on-duplicate", choices=("error", "skip"), default="error")
+    import_cmd.add_argument("--child")
+    import_cmd.add_argument("--by")
+
+    revise = sub.add_parser("revise")
+    revise.add_argument("file")
+    revise.add_argument("--table", choices=("task", "behavior"), default=None)
+    revise.add_argument("--json", action="store_true")
+    revise.add_argument("--child")
+    revise.add_argument("--by")
+
+    upload = sub.add_parser("upload-image")
+    upload.add_argument("paths", nargs="+")
+    upload.add_argument("--json", action="store_true")
+    upload.add_argument("--child")
+    upload.add_argument("--by")
     return parser
 
 
@@ -278,11 +684,17 @@ def main(argv=None) -> int:
         api = Api(base, token)
         if args.command == "show":
             cmd_show(args, base, api)
-        elif args.command == "students":
+            return EXIT_OK
+        if args.command == "students":
             cmd_students(args, base, api)
-        else:
-            raise CliError(EXIT_USAGE, f"未知命令: {args.command}")
-        return EXIT_OK
+            return EXIT_OK
+        if args.command == "import":
+            return cmd_import(args, base, api)
+        if args.command == "revise":
+            return cmd_revise(args, base, api)
+        if args.command == "upload-image":
+            return cmd_upload_image(args, base, api)
+        raise CliError(EXIT_USAGE, f"未知命令: {args.command}")
     except CliError as exc:
         print(json.dumps({"ok": False, "error": exc.message}, ensure_ascii=False), file=sys.stderr)
         return exc.code

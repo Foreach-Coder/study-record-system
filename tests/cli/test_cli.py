@@ -211,3 +211,251 @@ def test_missing_token_exits_4(tmp_path):
 def test_offline_is_a_usage_error(tmp_path, base):
     result = run(tmp_path, "show", "--offline", base=base)
     assert result.returncode == 1
+
+
+PLAN = {
+    "child": "李律研",
+    "date": "2026-11-07",
+    "by": "爸爸",
+    "homework": [
+        {
+            "标题": "数学口算",
+            "正文": "一页",
+            "类型": "作业",
+            "科目": "数学",
+            "截止日": "2026-11-07",
+            "开始日": "2026-11-07",
+            "图片": {"image": {"images": [{"imageUrl": "/media/images/a.jpg"}]}},
+        }
+    ],
+    "todo": [{"标题": "带水杯"}],
+    "behavior": [
+        {
+            "标题": "主动帮同学",
+            "正文": "帮同学捡笔",
+            "日期": "2026-11-07",
+            "维度": "品德",
+            "档位": "正向",
+            "来源": "老师反馈",
+        }
+    ],
+}
+
+PNG_1X1 = (
+    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+    b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDATx\x9cc\xfc\xff\x9f\xa1"
+    b"\x1e\x00\x07\x82\x02\x7f?5\xafY\x00\x00\x00\x00IEND\xaeB`\x82"
+)
+
+
+class WriteHandler(BaseHTTPRequestHandler):
+    def do_POST(self):
+        self._capture()
+
+    def do_PATCH(self):
+        self._capture()
+
+    def _capture(self):
+        length = int(self.headers.get("content-length") or 0)
+        raw = self.rfile.read(length)
+        self.server.captured.append(
+            {
+                "method": self.command,
+                "path": self.path,
+                "headers": {key.lower(): value for key, value in self.headers.items()},
+                "body": raw,
+            }
+        )
+        self._json(getattr(self.server, "status", 200), getattr(self.server, "reply", {"ok": True}))
+
+    def _json(self, status, payload):
+        body = json.dumps(payload).encode()
+        self.send_response(status)
+        self.send_header("content-type", "application/json")
+        self.send_header("content-length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, *_args):
+        pass
+
+
+@pytest.fixture()
+def write_server():
+    servers = []
+
+    def start(reply, status=200):
+        httpd = HTTPServer(("127.0.0.1", 0), WriteHandler)
+        httpd.captured = []
+        httpd.reply = reply
+        httpd.status = status
+        Thread(target=httpd.serve_forever, daemon=True).start()
+        servers.append(httpd)
+        return f"http://127.0.0.1:{httpd.server_port}", httpd
+
+    yield start
+    for httpd in servers:
+        httpd.shutdown()
+
+
+def write_json(tmp_path, name, payload):
+    path = tmp_path / name
+    path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    return path
+
+
+def test_import_maps_plan_to_child_name(tmp_path, write_server):
+    base, httpd = write_server(
+        {
+            "ok": True,
+            "mode": "apply",
+            "verification": {"tasks": 2, "behaviors": 1},
+            "skipped": {"tasks": 0, "behaviors": 0},
+        }
+    )
+    plan = write_json(tmp_path, "day.json", PLAN)
+    result = run(tmp_path, "import", str(plan), "--json", base=base)
+
+    assert result.returncode == 0, result.stderr
+    sent = httpd.captured[0]
+    assert sent["path"] == "/api/import"
+    body = json.loads(sent["body"])
+    assert body["mode"] == "apply"
+    assert body["onDuplicate"] == "error"
+    assert [item["kind"] for item in body["items"]] == ["task", "task", "behavior"]
+
+    task = body["items"][0]["data"]
+    assert task["childName"] == "李律研"
+    assert "childId" not in task
+    assert task["title"] == "数学口算"
+    assert task["type"] == "homework"
+    assert task["subject"] == "数学"
+    assert task["dueDate"] == "2026-11-07"
+    assert task["startDate"] == "2026-11-07"
+    assert task["createdBy"] == "爸爸"
+    assert task["images"] == [{"url": "/media/images/a.jpg", "title": None}]
+    assert body["items"][1]["data"]["type"] == "todo"
+    assert body["items"][1]["data"]["childName"] == "李律研"
+    behavior = body["items"][2]["data"]
+    assert behavior["occurredOn"] == "2026-11-07"
+    assert behavior["dimension"] == "品德"
+    assert behavior["tone"] == "正向"
+
+    payload = json.loads(result.stdout)
+    assert payload["dry_run"] is False
+    assert payload["ok"] is True
+    assert payload["student"] == "李律研"
+    assert payload["date"] == "2026-11-07"
+    task_table, behavior_table = payload["tables"]
+    assert task_table["table"] == "task"
+    assert task_table["label"] == "作业"
+    assert (task_table["submitted"], task_table["written"], task_table["verified"]) == (2, 2, 2)
+    assert (task_table["skipped"], task_table["failed"], task_table["unverified"]) == (0, 0, 0)
+    assert task_table["records"] == []
+    assert behavior_table["label"] == "在校表现"
+    assert (behavior_table["submitted"], behavior_table["written"]) == (1, 1)
+
+
+def test_import_dry_run_and_skip(tmp_path, write_server):
+    base, httpd = write_server(
+        {
+            "ok": True,
+            "mode": "dry-run",
+            "wouldWrite": {"tasks": 2, "behaviors": 1},
+            "verification": {"tasks": 0, "behaviors": 0},
+            "skipped": {"tasks": 0, "behaviors": 0},
+        }
+    )
+    plan = write_json(tmp_path, "day.json", PLAN)
+    result = run(tmp_path, "import", str(plan), "--dry-run", "--on-duplicate", "skip", "--json", base=base)
+
+    assert result.returncode == 0, result.stderr
+    body = json.loads(httpd.captured[0]["body"])
+    assert body["mode"] == "dry-run"
+    assert body["onDuplicate"] == "skip"
+    payload = json.loads(result.stdout)
+    assert payload["dry_run"] is True
+    assert payload["tables"][0]["written"] == 0
+    assert payload["tables"][0]["verified"] == 0
+    assert payload["tables"][0]["submitted"] == 2
+
+
+def test_import_duplicate_is_a_write_error(tmp_path, write_server):
+    base, _ = write_server(
+        {"error": {"code": "duplicate", "message": "重复记录"}}, status=409
+    )
+    plan = write_json(tmp_path, "day.json", PLAN)
+    result = run(tmp_path, "import", str(plan), "--json", base=base)
+    assert result.returncode == 3
+
+
+def test_revise_patches_records(tmp_path, write_server):
+    base, httpd = write_server({"ok": True, "id": "t1"})
+    payload = {
+        "table": "task",
+        "items": [
+            {
+                "record_id": "t1",
+                "title": "新标题",
+                "body": "新正文",
+                "due": "2026-11-09",
+                "start": "2026-11-07",
+                "subject": "语文",
+            }
+        ],
+    }
+    plan = write_json(tmp_path, "revise.json", payload)
+    result = run(tmp_path, "revise", str(plan), "--json", base=base)
+
+    assert result.returncode == 0, result.stderr
+    sent = httpd.captured[0]
+    assert sent["method"] == "PATCH"
+    assert sent["path"] == "/api/tasks/t1"
+    body = json.loads(sent["body"])
+    assert body == {
+        "title": "新标题",
+        "body": "新正文",
+        "dueDate": "2026-11-09",
+        "startDate": "2026-11-07",
+        "subject": "语文",
+    }
+    out = json.loads(result.stdout)
+    assert out["ok"] is True
+    assert out["table"] == "task"
+    assert out["label"] == "作业"
+    assert (out["submitted"], out["written"], out["verified"]) == (1, 1, 1)
+    assert (out["failed"], out["unverified"]) == (0, 0)
+    assert out["records"] == ["t1"]
+
+
+def test_upload_image_posts_multipart(tmp_path, write_server):
+    base, httpd = write_server({"url": "/media/images/abc.png", "width": 1, "height": 1})
+    image = tmp_path / "one.png"
+    image.write_bytes(PNG_1X1)
+    result = run(tmp_path, "upload-image", str(image), "--json", base=base)
+
+    assert result.returncode == 0, result.stderr
+    sent = httpd.captured[0]
+    assert sent["path"] == "/api/images"
+    assert sent["headers"]["content-type"].startswith("multipart/form-data; boundary=")
+    raw = sent["body"]
+    assert b'name="file"' in raw and b'filename="one.png"' in raw
+    assert b'name="width"' in raw and b"\r\n\r\n1\r\n" in raw
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert payload["errors"] == []
+    item = payload["images"][0]
+    assert item["file"] == "one.png"
+    assert item["path"] == str(image)
+    assert item["url"] == f"{base}/media/images/abc.png"
+    assert (item["width"], item["height"], item["bytes"]) == (1, 1, len(PNG_1X1))
+    assert item["cached"] is False
+
+
+def test_upload_image_missing_file_reports_error(tmp_path, write_server):
+    base, _ = write_server({"url": "/media/images/abc.png"})
+    result = run(tmp_path, "upload-image", str(tmp_path / "nope.png"), "--json", base=base)
+    assert result.returncode == 3
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["errors"]
