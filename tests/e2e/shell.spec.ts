@@ -1,4 +1,4 @@
-﻿import { expect, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 test("shows the shell, tabs and child switcher", async ({ page }) => {
   const seeded = await page.request.post("/api/children", {
