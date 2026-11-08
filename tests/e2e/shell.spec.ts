@@ -1,8 +1,8 @@
-import { expect, test } from "@playwright/test";
+﻿import { expect, test } from "@playwright/test";
 
 test("shows the shell, tabs and child switcher", async ({ page }) => {
   const seeded = await page.request.post("/api/children", {
-    headers: { authorization: "Bearer test-token" },
+    headers: { authorization: `Bearer ${process.env.E2E_TOKEN ?? "test-token"}` },
     data: { nickname: "小力" },
   });
   expect([201, 409]).toContain(seeded.status());

@@ -1,7 +1,7 @@
-import { expect, test } from "@playwright/test";
+﻿import { expect, test } from "@playwright/test";
 import { login, seedChild, seedImport, shanghaiToday } from "./helpers";
 
-const TOKEN = "test-token";
+const TOKEN = process.env.E2E_TOKEN ?? "test-token";
 
 test("adds and renames a child", async ({ page }) => {
   const nickname = `小管理${Date.now()}`;

@@ -11,3 +11,5 @@ playwright-report/
 test-results/
 SPIKE.md
 cli/spike_client.py
+.dev.vars.production
+.dev.vars.production*

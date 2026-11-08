@@ -1,8 +1,8 @@
-import { expect, test, type Page } from "@playwright/test";
+﻿import { expect, test, type Page } from "@playwright/test";
 import { login, seedChild } from "./helpers";
 
 async function cleanupChild(page: Page, nickname: string) {
-  const headers = { authorization: "Bearer test-token" };
+  const headers = { authorization: `Bearer ${process.env.E2E_TOKEN ?? "test-token"}` };
   const response = await page.request.get("/api/state", { headers });
   if (!response.ok()) return;
   const state = (await response.json()) as { children: Array<{ id: string; nickname: string }> };
