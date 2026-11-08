@@ -13,11 +13,12 @@ const manager = ref<InstanceType<typeof ChildManager> | null>(null);
     <label class="sr-only" for="child-select">孩子</label>
     <select
       id="child-select"
-      :value="current?.id ?? ''"
+      :value="current?.id ?? 'all'"
       :disabled="list.length === 0"
-      @change="selectChild(($event.target as HTMLSelectElement).value || null)"
+      @change="selectChild(($event.target as HTMLSelectElement).value === 'all' ? 'all' : (($event.target as HTMLSelectElement).value || null))"
     >
       <option v-if="list.length === 0" value="">还没有孩子</option>
+      <option v-else value="all">全部孩子</option>
       <option v-for="child in list" :key="child.id" :value="child.id">{{ child.nickname }}</option>
     </select>
     <button type="button" class="manage" @click="manager?.open()">管理孩子</button>

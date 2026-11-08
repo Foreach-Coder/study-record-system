@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { reactive, watch } from "vue";
-import type { Child, Subject, TaskImage, TaskType } from "../../shared/schema";
+import type { Child, Subject, Task, TaskImage, TaskType } from "../../shared/schema";
 import { SUBJECTS } from "../../shared/schema";
 import { todayInShanghai } from "../../shared/dates";
 import ImagePicker from "./ImagePicker.vue";
@@ -31,7 +31,7 @@ function blank(): Draft {
   };
 }
 
-const props = defineProps<{ child: Child | null; error?: string }>();
+const props = defineProps<{ child: Child | null; error?: string; initial?: Task | null }>();
 const emit = defineEmits<{ submit: [body: Record<string, unknown>] }>();
 const draft = reactive<Draft>(blank());
 
@@ -60,7 +60,19 @@ function load() {
   }
 }
 
-load();
+if (props.initial) {
+  const task = props.initial;
+  draft.title = task.title;
+  draft.body = task.body ?? "";
+  draft.type = task.type;
+  draft.subject = task.subject ?? "语文";
+  draft.dueDate = task.dueDate;
+  draft.startDate = task.startDate ?? "";
+  draft.createdBy = task.createdBy ?? "";
+  draft.images = task.images ?? [];
+} else {
+  load();
+}
 
 let silent = false;
 watch(
@@ -90,7 +102,7 @@ function reset() {
 defineExpose({ reset });
 
 function submit() {
-  emit("submit", { ...draft, childId: props.child?.id, images: draft.images });
+  emit("submit", { ...draft, childId: props.initial?.childId ?? props.child?.id, images: draft.images });
 }
 </script>
 

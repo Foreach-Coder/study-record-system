@@ -65,6 +65,14 @@ describe("tasks", () => {
       images: [],
       createdBy: null,
     });
+
+    const undo = await SELF.fetch(`${BASE}/api/tasks/${body.id}`, {
+      method: "PATCH",
+      headers: HEADERS,
+      body: JSON.stringify({ completed: false }),
+    });
+    expect(undo.status).toBe(200);
+    expect(await undo.json()).toMatchObject({ completed: false, checked: false });
   });
 
   it("deletes a task", async () => {

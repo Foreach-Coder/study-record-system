@@ -105,6 +105,8 @@ export async function updateTask(request: Request, env: Env): Promise<Response> 
   const referencesChild = Boolean(body.childId || body.child || body.childName);
   const child = referencesChild ? await resolveChild(env, body) : { id: existing.childId, nickname: existing.childName };
   const merged = { ...draftFromRow(existing), ...body, child: child.nickname, childName: child.nickname };
+  // 取消完成必须同时取消“已检查”，否则 checked=true 会把它重新抬回 completed=true。
+  if (body.completed === false) merged.checked = false;
   const result = validateTask(merged, { today: todayInShanghai(), childNames: new Set([child.nickname]) });
   if (!result.ok) throw new ApiProblem(422, "validation", "任务不合法", result.fields);
   const duplicate = await findDuplicate(env, "tasks", "child_name = ? AND title = ? AND due_date = ?", [child.nickname, result.value.title, result.value.dueDate], id);

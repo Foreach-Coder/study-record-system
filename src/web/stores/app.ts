@@ -26,6 +26,7 @@ export function children(): Child[] {
 }
 
 export function selectedChild(): Child | null {
+  if (store.selectedChildId === "all") return null;
   return children().find((child) => child.id === store.selectedChildId) ?? children()[0] ?? null;
 }
 
@@ -44,7 +45,11 @@ export function visibleTasks(): Task[] {
   const child = selectedChild();
   const tasks = store.state?.tasks ?? [];
   return child
-    ? tasks.filter((task) => task.childId === null || task.childName === child.nickname)
+    ? tasks.filter(
+        (task) =>
+          task.childId === child.id ||
+          (task.childId === null && task.childName === child.nickname),
+      )
     : tasks;
 }
 
@@ -52,7 +57,11 @@ export function visibleBehaviors(): Behavior[] {
   const child = selectedChild();
   const behaviors = store.state?.behaviors ?? [];
   return child
-    ? behaviors.filter((behavior) => behavior.childId === null || behavior.childName === child.nickname)
+    ? behaviors.filter(
+        (behavior) =>
+          behavior.childId === child.id ||
+          (behavior.childId === null && behavior.childName === child.nickname),
+      )
     : behaviors;
 }
 

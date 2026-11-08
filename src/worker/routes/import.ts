@@ -157,26 +157,102 @@ async function cleanup(env: Env, prepared: Prepared[]): Promise<void> {
   ]);
 }
 
-async function countIds(env: Env, table: Bucket, ids: string[]): Promise<number> {
-  let total = 0;
+type VerifyRow = Record<string, unknown>;
+
+async function selectRows(env: Env, table: Bucket, ids: string[]): Promise<Map<string, VerifyRow>> {
+  const columns =
+    table === "tasks"
+      ? "id, child_name, title, body, type, subject, due_date, start_date, completed, checked, images, created_by"
+      : "id, child_name, title, body, occurred_on, dimension, tone, source, images, created_by";
+  const rows = new Map<string, VerifyRow>();
   for (const chunk of chunks(ids)) {
     const placeholders = chunk.map(() => "?").join(",");
-    const row = await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE id IN (${placeholders})`)
+    const result = await env.DB.prepare(`SELECT ${columns} FROM ${table} WHERE id IN (${placeholders})`)
       .bind(...chunk)
-      .first<{ n: number }>();
-    total += row?.n ?? 0;
+      .all<VerifyRow>();
+    for (const row of result.results ?? []) rows.set(String(row.id), row);
   }
-  return total;
+  return rows;
+}
+
+function sameField(actual: unknown, expected: unknown): boolean {
+  if (expected === null || expected === undefined) return actual === null || actual === undefined;
+  if (typeof expected === "boolean") return Boolean(actual) === expected;
+  if (typeof expected === "number") return Number(actual) === expected;
+  return String(actual ?? "") === String(expected);
+}
+
+function sameImages(actual: unknown, expected: unknown): boolean {
+  try {
+    return JSON.stringify(JSON.parse(String(actual ?? "[]"))) === JSON.stringify(expected ?? []);
+  } catch {
+    return false;
+  }
+}
+
+function verifyRow(kind: Kind, row: VerifyRow | undefined, item: Prepared): void {
+  if (!row) throw new ApiProblem(500, "verification_failed", "导入后回读缺少记录", undefined, { id: item.id });
+  const v = item.values;
+  if (!sameField(row.child_name, item.childName)) throw new ApiProblem(500, "verification_failed", "导入后孩子不符", undefined, { id: item.id });
+  const fields: [string, unknown][] =
+    kind === "task"
+      ? [
+          ["title", v.title],
+          ["body", v.body],
+          ["type", v.type],
+          ["subject", v.subject],
+          ["due_date", v.dueDate],
+          ["start_date", v.startDate],
+          ["completed", v.completed],
+          ["checked", v.checked],
+          ["created_by", v.createdBy],
+        ]
+      : [
+          ["title", v.title],
+          ["body", v.body],
+          ["occurred_on", v.occurredOn],
+          ["dimension", v.dimension],
+          ["tone", v.tone],
+          ["source", v.source],
+          ["created_by", v.createdBy],
+        ];
+  for (const [column, expected] of fields) {
+    if (!sameField(row[column], expected)) {
+      throw new ApiProblem(500, "verification_failed", "导入后字段不符", undefined, { id: item.id, column });
+    }
+  }
+  if (!sameImages(row.images, v.images ?? [])) {
+    throw new ApiProblem(500, "verification_failed", "导入后图片不符", undefined, { id: item.id, column: "images" });
+  }
 }
 
 async function verify(env: Env, prepared: Prepared[]): Promise<Record<Bucket, number>> {
   const taskIds = prepared.filter((item) => item.kind === "task").map((item) => item.id);
   const behaviorIds = prepared.filter((item) => item.kind === "behavior").map((item) => item.id);
-  const [tasks, behaviors] = await Promise.all([
-    countIds(env, "tasks", taskIds),
-    countIds(env, "behaviors", behaviorIds),
+  const [taskRows, behaviorRows] = await Promise.all([
+    selectRows(env, "tasks", taskIds),
+    selectRows(env, "behaviors", behaviorIds),
   ]);
-  return { tasks, behaviors };
+  const expected = {
+    tasks: prepared.filter((item) => item.kind === "task").length,
+    behaviors: prepared.filter((item) => item.kind === "behavior").length,
+  };
+  const actual = { tasks: taskRows.size, behaviors: behaviorRows.size };
+  for (const item of prepared) {
+    try {
+      verifyRow(item.kind, item.kind === "task" ? taskRows.get(item.id) : behaviorRows.get(item.id), item);
+    } catch (error) {
+      if (error instanceof ApiProblem) {
+        throw new ApiProblem(500, error.code, error.message, error.fields, {
+          ...(error.extra ?? {}),
+          expected,
+          actual,
+        });
+      }
+      throw error;
+    }
+  }
+  return actual;
 }
 
 export async function importItems(request: Request, env: Env): Promise<Response> {
@@ -298,6 +374,7 @@ export async function importItems(request: Request, env: Env): Promise<Response>
     verification = await verify(env, prepared);
   } catch (error) {
     await cleanup(env, prepared);
+    if (error instanceof ApiProblem) throw error;
     throw new ApiProblem(500, "verification_failed", "导入后无法回读核验", undefined, { reason: String(error) });
   }
   if (verification.tasks !== counts.tasks || verification.behaviors !== counts.behaviors) {

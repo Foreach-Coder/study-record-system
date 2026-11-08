@@ -4,6 +4,7 @@ import { useRoute, useRouter } from "vue-router";
 import { todayInShanghai } from "../../shared/dates";
 import { api, ApiError } from "../api";
 import MarkdownView from "../components/MarkdownView.vue";
+import EntrySheet from "../components/EntrySheet.vue";
 import { refresh, store } from "../stores/app";
 
 const route = useRoute();
@@ -12,6 +13,7 @@ const task = computed(() => (store.state?.tasks ?? []).find((item) => item.id ==
 const pending = ref(false);
 const error = ref("");
 const confirming = ref(false);
+const entry = ref<InstanceType<typeof EntrySheet> | null>(null);
 const today = todayInShanghai();
 const canDelay = computed(() => !!task.value && !task.value.completed && task.value.dueDate < today);
 
@@ -74,10 +76,12 @@ async function removeConfirmed() {
       <button v-if="canDelay" type="button" :disabled="pending" @click="delayToToday">
         顺延到今天
       </button>
+      <button type="button" :disabled="pending" @click="entry?.editTask(task)">编辑</button>
       <button type="button" class="danger" :disabled="pending" @click="confirming = true">删除</button>
     </div>
     <p v-if="error" class="error">{{ error }}</p>
     <MarkdownView :body="task.body || '没有正文'" />
+    <EntrySheet ref="entry" />
     <div v-if="confirming" class="dialog" role="dialog" aria-label="确认删除">
       <p>删除后无法恢复，确定要删除「{{ task.title }}」吗？</p>
       <button type="button" class="danger" :disabled="pending" @click="removeConfirmed">确认删除</button>

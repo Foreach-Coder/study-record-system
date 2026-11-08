@@ -4,6 +4,7 @@ import { api, ApiError } from "../api";
 import { refresh, selectedChild } from "../stores/app";
 import BehaviorForm from "./BehaviorForm.vue";
 import TaskForm from "./TaskForm.vue";
+import type { Behavior, Task } from "../../shared/schema";
 
 type Mode = "task" | "behavior";
 const DRAFT_KEYS: Record<Mode, string> = { task: "sr.draft.task", behavior: "sr.draft.behavior" };
@@ -13,6 +14,8 @@ const mode = ref<Mode>("task");
 const error = ref("");
 const busy = ref(false);
 const child = computed(() => selectedChild());
+const editingTask = ref<Task | null>(null);
+const editingBehavior = ref<Behavior | null>(null);
 const taskForm = ref<InstanceType<typeof TaskForm> | null>(null);
 const behaviorForm = ref<InstanceType<typeof BehaviorForm> | null>(null);
 
@@ -22,6 +25,24 @@ watch(open, (value) => {
 
 function show(next: Mode) {
   mode.value = next;
+  editingTask.value = null;
+  editingBehavior.value = null;
+  error.value = "";
+  open.value = true;
+}
+
+function editTask(task: Task) {
+  mode.value = "task";
+  editingTask.value = task;
+  editingBehavior.value = null;
+  error.value = "";
+  open.value = true;
+}
+
+function editBehavior(behavior: Behavior) {
+  mode.value = "behavior";
+  editingBehavior.value = behavior;
+  editingTask.value = null;
   error.value = "";
   open.value = true;
 }
@@ -37,10 +58,12 @@ async function submit(body: Record<string, unknown>) {
   error.value = "";
   try {
     if (mode.value === "task") {
-      await api.createTask(body);
+      if (editingTask.value) await api.updateTask(editingTask.value.id, body);
+      else await api.createTask(body);
       taskForm.value?.reset();
     } else {
-      await api.createBehavior(body);
+      if (editingBehavior.value) await api.updateBehavior(editingBehavior.value.id, body);
+      else await api.createBehavior(body);
       behaviorForm.value?.reset();
     }
     try {
@@ -57,7 +80,7 @@ async function submit(body: Record<string, unknown>) {
   }
 }
 
-defineExpose({ show });
+defineExpose({ show, editTask, editBehavior });
 </script>
 
 <template>
@@ -66,14 +89,14 @@ defineExpose({ show });
       <section
         class="sheet"
         role="dialog"
-        :aria-label="mode === 'task' ? '新增作业或待办' : '新增在校表现'"
+        :aria-label="mode === 'task' ? (editingTask ? '编辑作业或待办' : '新增作业或待办') : (editingBehavior ? '编辑在校表现' : '新增在校表现')"
       >
         <header class="head">
-          <h2>{{ mode === "task" ? "新增作业或待办" : "新增在校表现" }}</h2>
+          <h2>{{ mode === "task" ? (editingTask ? "编辑作业或待办" : "新增作业或待办") : (editingBehavior ? "编辑在校表现" : "新增在校表现") }}</h2>
           <button type="button" aria-label="关闭" @click="close">×</button>
         </header>
-        <TaskForm v-if="mode === 'task'" ref="taskForm" :child="child" :error="error" @submit="submit" />
-        <BehaviorForm v-else ref="behaviorForm" :child="child" :error="error" @submit="submit" />
+        <TaskForm v-if="mode === 'task'" ref="taskForm" :child="child" :initial="editingTask" :error="error" @submit="submit" />
+        <BehaviorForm v-else ref="behaviorForm" :child="child" :initial="editingBehavior" :error="error" @submit="submit" />
       </section>
     </div>
   </Teleport>

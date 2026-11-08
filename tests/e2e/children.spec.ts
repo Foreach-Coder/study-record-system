@@ -1,4 +1,4 @@
-﻿import { expect, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { login, seedChild, seedImport, shanghaiToday } from "./helpers";
 
 const TOKEN = process.env.E2E_TOKEN ?? "test-token";
@@ -37,6 +37,7 @@ test("keeps orphan tasks after deleting a child", async ({ page }) => {
   await dialog.locator("li", { hasText: nickname }).getByRole("button", { name: "删除" }).click();
   await expect(dialog.locator("li", { hasText: nickname })).toHaveCount(0);
   await dialog.getByRole("button", { name: "关闭" }).click();
+  await page.getByLabel("孩子").selectOption({ label: "全部孩子" });
 
   const row = page.locator(".task-row").filter({ hasText: title });
   await expect(row).toBeVisible();

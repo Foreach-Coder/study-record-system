@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Task } from "../../src/shared/schema";
-import { groupTasks, todayTasks } from "../../src/shared/grouping";
+import { groupCompletedTasks, groupTasks, todayTasks } from "../../src/shared/grouping";
 import { groupHeader, progress, taskLabel } from "../../src/shared/labels";
 
 function task(over: Partial<Task>): Task {
@@ -29,14 +29,24 @@ describe("todayTasks", () => {
 });
 
 describe("groupTasks", () => {
-  it("groups consecutive start dates and keeps due-date order", () => {
+  it("groups by start date, falling back to due date when start is null", () => {
     const groups = groupTasks([
       task({ id: "a", startDate: "2026-11-08", dueDate: "2026-11-09" }),
       task({ id: "b", startDate: "2026-11-08", dueDate: "2026-11-08" }),
       task({ id: "c", startDate: null, dueDate: "2026-11-07" }),
     ]);
-    expect(groups.map((g) => g.key)).toEqual(["2026-11-08", "unscheduled"]);
-    expect(groups[0].tasks.map((t) => t.id)).toEqual(["b", "a"]);
+    expect(groups.map((g) => g.key)).toEqual(["2026-11-07", "2026-11-08"]);
+    expect(groups[1].tasks.map((t) => t.id)).toEqual(["b", "a"]);
+  });
+
+  it("groups completed tasks by due date descending", () => {
+    const groups = groupCompletedTasks([
+      task({ id: "old", dueDate: "2026-11-06", completed: true }),
+      task({ id: "new", dueDate: "2026-11-08", completed: true }),
+      task({ id: "same", dueDate: "2026-11-08", completed: true }),
+    ]);
+    expect(groups.map((g) => g.key)).toEqual(["2026-11-08", "2026-11-06"]);
+    expect(groups[0].tasks.map((t) => t.id)).toEqual(["new", "same"]);
   });
 });
 

@@ -17,7 +17,7 @@ test("completes and deletes a task", async ({ page }) => {
   ]);
   await page.goto("/tasks");
   await page.getByRole("button", { name: /可勾选/ }).click();
-  await page.getByRole("button", { name: "完成" }).click();
+  await page.getByRole("button", { name: "完成", exact: true }).click();
   await expect(page.getByText("已完成")).toBeVisible();
   await page.getByRole("button", { name: "删除" }).click();
   await page.getByRole("button", { name: "确认删除" }).click();
