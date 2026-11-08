@@ -24,5 +24,5 @@ test("lists behaviors, shows stats, and opens a detail", async ({ page }) => {
   await page.getByRole("button", { name: /主动帮同学/ }).click();
   await expect(page).toHaveURL(/\/behaviors\/.+/);
   await expect(page.getByRole("heading", { name: "主动帮同学" })).toBeVisible();
-  await expect(page.getByText("## 经过")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "经过" })).toBeVisible();
 });

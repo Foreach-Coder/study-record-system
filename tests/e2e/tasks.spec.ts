@@ -34,5 +34,5 @@ test("lists tasks, filters, and opens a detail", async ({ page }) => {
   await expect(page).toHaveURL(/\/tasks\/.+/);
   await expect(page.getByRole("heading", { name: "数学口算" })).toBeVisible();
   await expect(page.getByText("数学", { exact: true })).toBeVisible();
-  await expect(page.getByText("## 要求")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "要求" })).toBeVisible();
 });

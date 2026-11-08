@@ -6,7 +6,12 @@ import ImageViewer from "./ImageViewer.vue";
 
 const props = defineProps<{ body: string }>();
 const viewing = ref<string | null>(null);
-const html = computed(() => DOMPurify.sanitize(marked.parse(props.body, { async: false }) as string));
+const html = computed(() =>
+  DOMPurify.sanitize(
+    marked.parse(props.body, { async: false, gfm: true, breaks: true }) as string,
+    { FORBID_TAGS: ["style"], FORBID_ATTR: ["style", "srcset"] },
+  ),
+);
 
 function onClick(event: MouseEvent) {
   const target = event.target as HTMLElement;
