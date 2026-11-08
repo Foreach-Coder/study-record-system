@@ -39,7 +39,10 @@ function retry() {
         @retry="retry"
       />
       <template v-else>
-        <p v-if="store.error" class="error-banner" role="status">{{ store.error }}</p>
+        <p v-if="store.error" class="error-banner" role="status">
+          <span>{{ store.error }}</span>
+          <button type="button" class="banner-retry" @click="retry">重试</button>
+        </p>
         <RouterView />
       </template>
     </main>
@@ -54,7 +57,8 @@ function retry() {
 .app-shell { max-width: 860px; margin: 0 auto; min-height: 100dvh; padding: 0 16px; display: flex; flex-direction: column; }
 .app-main { flex: 1; padding-bottom: 84px; }
 .loading { padding: 36px 0; text-align: center; color: var(--muted); }
-.error-banner { margin: 8px 0 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--danger); font-size: 13px; }
+.error-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 8px 0 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--danger); font-size: 13px; }
+.banner-retry { flex: none; padding: 4px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); color: var(--text); font-size: 13px; }
 .fab { position: fixed; right: 18px; bottom: 84px; z-index: 30; width: 56px; height: 56px; border: 0; border-radius: 50%; background: var(--accent); color: white; font-size: 26px; line-height: 1; box-shadow: 0 8px 20px rgb(0 0 0 / 18%); }
 .fab.behavior { bottom: 150px; width: 48px; height: 48px; font-size: 12px; background: var(--surface); color: var(--text); border: 1px solid var(--line); }
 </style>
