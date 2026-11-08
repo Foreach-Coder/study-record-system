@@ -14,6 +14,7 @@ defineEmits<{ open: [behavior: Behavior] }>();
         <span v-if="behavior.dimension">{{ behavior.dimension }}</span>
         <span v-if="behavior.tone" :class="behavior.tone === '需关注' ? 'warn' : 'ok'">{{ behavior.tone }}</span>
         <span v-if="behavior.source">{{ behavior.source }}</span>
+        <span v-if="behavior.childId === null" class="orphan">孤儿</span>
       </span>
     </span>
   </button>
@@ -27,4 +28,5 @@ strong { display: block; }
 .tags { display: flex; gap: 8px; margin-top: 4px; color: var(--muted); font-size: 12px; }
 .ok { color: var(--ok); }
 .warn { color: var(--warn); }
+.orphan { color: var(--warn); border: 1px solid currentColor; border-radius: 999px; padding: 0 6px; }
 </style>

@@ -44,6 +44,7 @@ function onTouchEnd(event: TouchEvent) {
           <span v-if="task.type === 'homework' && task.subject">{{ task.subject }}</span>
           <span v-if="label" :class="label.tone">{{ label.text }}</span>
           <span v-if="task.checked">已检查</span>
+          <span v-if="task.childId === null" class="orphan">孤儿</span>
         </span>
       </span>
       <span v-if="task.images.length" class="count">{{ task.images.length }} 图</span>
@@ -74,6 +75,7 @@ function onTouchEnd(event: TouchEvent) {
 .overdue { color: var(--danger); font-weight: 600; }
 .today { color: var(--accent); font-weight: 600; }
 .count { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.orphan { color: var(--warn); border: 1px solid currentColor; border-radius: 999px; padding: 0 6px; }
 .swipe-actions { display: flex; gap: 6px; flex: none; }
 .swipe-actions button { min-height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 12px; }
 .swipe-actions .danger { color: white; background: var(--danger); border-color: var(--danger); }

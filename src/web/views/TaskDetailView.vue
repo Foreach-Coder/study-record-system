@@ -13,7 +13,7 @@ const pending = ref(false);
 const error = ref("");
 const confirming = ref(false);
 const today = todayInShanghai();
-const canDelay = computed(() => !!task.value && task.value.dueDate < today);
+const canDelay = computed(() => !!task.value && !task.value.completed && task.value.dueDate < today);
 
 function fail(reason: unknown) {
   error.value = reason instanceof ApiError ? reason.message : "操作失败，请重试";
@@ -62,6 +62,7 @@ async function removeConfirmed() {
       <span>{{ task.dueDate }} 截止</span>
       <span v-if="task.completed" class="done">已完成</span>
       <span v-if="task.checked">已检查</span>
+      <span v-if="task.childId === null" class="orphan">孤儿</span>
     </p>
     <div class="actions">
       <button type="button" :disabled="pending" @click="update({ completed: !task.completed })">
@@ -91,6 +92,7 @@ async function removeConfirmed() {
 h1 { margin: 4px 0 8px; font-size: clamp(24px, 6vw, 36px); }
 .meta { display: flex; gap: 10px; flex-wrap: wrap; color: var(--muted); font-size: 13px; }
 .meta .done { color: var(--ok); font-weight: 600; }
+.meta .orphan { color: var(--warn); border: 1px solid currentColor; border-radius: 999px; padding: 0 6px; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
 .actions button { min-height: 40px; padding: 0 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); }
 .actions button:disabled { opacity: .5; }

@@ -1,6 +1,6 @@
 import { reactive } from "vue";
 import { api, ApiError } from "../api";
-import type { AppState, Child, Task } from "../../shared/schema";
+import type { AppState, Behavior, Child, Task } from "../../shared/schema";
 import { todayTasks } from "../../shared/grouping";
 import { computeHorizon } from "../../shared/horizon";
 
@@ -43,7 +43,17 @@ export function selectChild(id: string | null): void {
 export function visibleTasks(): Task[] {
   const child = selectedChild();
   const tasks = store.state?.tasks ?? [];
-  return child ? tasks.filter((task) => task.childName === child.nickname) : tasks;
+  return child
+    ? tasks.filter((task) => task.childId === null || task.childName === child.nickname)
+    : tasks;
+}
+
+export function visibleBehaviors(): Behavior[] {
+  const child = selectedChild();
+  const behaviors = store.state?.behaviors ?? [];
+  return child
+    ? behaviors.filter((behavior) => behavior.childId === null || behavior.childName === child.nickname)
+    : behaviors;
 }
 
 export function todayList(): Task[] {
@@ -57,7 +67,12 @@ export async function refresh(): Promise<void> {
   store.error = "";
   try {
     store.state = await api.state();
-    if (!store.selectedChildId && store.state.children[0]) selectChild(store.state.children[0].id);
+    const ids = new Set(store.state.children.map((child) => child.id));
+    if (store.selectedChildId && !ids.has(store.selectedChildId)) {
+      selectChild(store.state.children[0]?.id ?? null);
+    } else if (!store.selectedChildId && store.state.children[0]) {
+      selectChild(store.state.children[0].id);
+    }
   } catch (error) {
     store.error = error instanceof ApiError ? error.message : "无法加载数据";
     throw error;

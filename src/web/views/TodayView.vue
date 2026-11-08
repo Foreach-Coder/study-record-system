@@ -7,17 +7,14 @@ import { progress } from "../../shared/labels";
 import { api, ApiError } from "../api";
 import ProgressCard from "../components/ProgressCard.vue";
 import TaskGroup from "../components/TaskGroup.vue";
-import { refresh, selectedChild, store, todayList, visibleTasks } from "../stores/app";
+import { refresh, store, todayList, visibleBehaviors, visibleTasks } from "../stores/app";
 
 const router = useRouter();
 const today = computed(() => store.state?.today ?? "");
 const tasks = computed(() => todayList());
 const groups = computed(() => groupTasks(tasks.value));
 const stats = computed(() => today.value ? progress(visibleTasks(), today.value) : { total: 0, done: 0, percent: 0 });
-const recent = computed(() => {
-  const child = selectedChild();
-  return (store.state?.behaviors ?? []).filter((item) => item.childName === child?.nickname).slice(0, 3);
-});
+const recent = computed(() => visibleBehaviors().slice(0, 3));
 
 function fail(error: unknown) {
   store.error = error instanceof ApiError ? error.message : "操作失败";

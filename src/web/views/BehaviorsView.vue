@@ -3,14 +3,13 @@ import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
 import { addDays, todayInShanghai } from "../../shared/dates";
 import BehaviorCard from "../components/BehaviorCard.vue";
-import { selectedChild, store } from "../stores/app";
+import { visibleBehaviors } from "../stores/app";
 
 const router = useRouter();
 const days = ref(30);
 const list = computed(() => {
-  const child = selectedChild();
   const cutoff = addDays(todayInShanghai(), -(days.value - 1));
-  return (store.state?.behaviors ?? []).filter((item) => item.childName === child?.nickname && item.occurredOn >= cutoff);
+  return visibleBehaviors().filter((item) => item.occurredOn >= cutoff);
 });
 const stats = computed(() => ({
   total: list.value.length,
