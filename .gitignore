@@ -18,3 +18,5 @@ cli/spike_client.py
 media/
 __pycache__/
 .pytest_cache/
+
+.vite/
