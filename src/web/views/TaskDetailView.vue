@@ -67,6 +67,7 @@ async function removeConfirmed() {
     <p class="meta">
       <span>{{ task.childName }}</span>
       <span v-if="task.subject">{{ task.subject }}</span>
+      <span v-if="task.startDate">{{ task.startDate }} 开始</span>
       <span>{{ task.dueDate }} 截止</span>
       <span v-if="task.completed" class="done">已完成</span>
       <span v-if="task.checked">已检查</span>
