@@ -17,10 +17,11 @@ test("completes and deletes a task", async ({ page }) => {
   ]);
   await page.goto("/tasks");
   await page.getByRole("button", { name: /可勾选/ }).click();
-  await page.getByRole("button", { name: "完成", exact: true }).click();
+  await page.getByRole("button", { name: "未完成", exact: true }).click();
   await expect(page.getByText("已完成")).toBeVisible();
-  await page.getByRole("button", { name: "删除" }).click();
-  await page.getByRole("button", { name: "确认删除" }).click();
+  await page.locator('summary[aria-label="更多操作"]').click();
+  await page.getByRole("button", { name: "删除", exact: true }).click();
+  await page.getByRole("dialog", { name: "确认删除" }).getByRole("button", { name: "删除", exact: true }).click();
   await expect(page).toHaveURL(/\/tasks$/);
   await expect(page.getByText("可勾选")).toHaveCount(0);
 });
@@ -40,6 +41,7 @@ test("delays an overdue task to today", async ({ page }) => {
   ]);
   await page.goto("/tasks");
   await page.getByRole("button", { name: /昨天的作业/ }).click();
+  await page.locator('summary[aria-label="更多操作"]').click();
   const delay = page.getByRole("button", { name: "顺延到今天" });
   await expect(delay).toBeVisible();
   await delay.click();

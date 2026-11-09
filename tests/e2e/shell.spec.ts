@@ -20,6 +20,7 @@ test("shows the shell, tabs and child switcher", async ({ page }) => {
   await expect(page.getByRole("link", { name: "作业" })).toBeVisible();
   await expect(page.getByRole("link", { name: "表现" })).toBeVisible();
   await expect(page.getByLabel("孩子")).toBeVisible();
+  await page.locator('summary[aria-label="更多"]').click();
   await expect(page.getByRole("button", { name: "退出登录" })).toBeVisible();
 
   await page.getByRole("button", { name: "退出登录" }).click();

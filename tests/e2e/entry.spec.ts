@@ -13,11 +13,11 @@ test("creates a task with an uploaded image", async ({ page }) => {
   await seedChild(page, nickname);
   await page.reload();
   await page.getByLabel("孩子").selectOption({ label: nickname });
-  await page.getByRole("button", { name: "新增记录" }).click();
+  await page.getByRole("button", { name: "记录", exact: true }).click();
   await page.getByLabel("标题").fill("数学口算");
   await page.getByLabel("科目").selectOption("数学");
   await page.getByLabel("截止日").fill(shanghaiToday());
-  await page.getByLabel("图片").setInputFiles({ name: "pixel.png", mimeType: "image/png", buffer: PNG });
+  await page.getByLabel("添加图片").setInputFiles({ name: "pixel.png", mimeType: "image/png", buffer: PNG });
   await expect(page.getByRole("img", { name: "已选图片" })).toBeVisible();
   await page.getByRole("button", { name: "保存" }).click();
 

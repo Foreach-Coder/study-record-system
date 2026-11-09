@@ -19,6 +19,11 @@ const editingBehavior = ref<Behavior | null>(null);
 const taskForm = ref<InstanceType<typeof TaskForm> | null>(null);
 const behaviorForm = ref<InstanceType<typeof BehaviorForm> | null>(null);
 
+const title = computed(() => {
+  if (mode.value === "task") return editingTask.value ? "编辑作业/待办" : "新增记录";
+  return editingBehavior.value ? "编辑在校表现" : "新增在校表现";
+});
+
 watch(open, (value) => {
   document.body.style.overflow = value ? "hidden" : "";
 });
@@ -45,6 +50,12 @@ function editBehavior(behavior: Behavior) {
   editingTask.value = null;
   error.value = "";
   open.value = true;
+}
+
+function switchMode(next: Mode) {
+  if (editingTask.value || editingBehavior.value) return;
+  mode.value = next;
+  error.value = "";
 }
 
 function close() {
@@ -86,26 +97,133 @@ defineExpose({ show, editTask, editBehavior });
 <template>
   <Teleport to="body">
     <div v-if="open" class="backdrop" @click.self="close">
-      <section
-        class="sheet"
-        role="dialog"
-        :aria-label="mode === 'task' ? (editingTask ? '编辑作业或待办' : '新增作业或待办') : (editingBehavior ? '编辑在校表现' : '新增在校表现')"
-      >
+      <section class="sheet" role="dialog" :aria-label="title">
+        <div class="handle" aria-hidden="true" />
         <header class="head">
-          <h2>{{ mode === "task" ? (editingTask ? "编辑作业或待办" : "新增作业或待办") : (editingBehavior ? "编辑在校表现" : "新增在校表现") }}</h2>
-          <button type="button" aria-label="关闭" @click="close">×</button>
+          <h2>{{ title }}</h2>
+          <button type="button" class="close" aria-label="关闭" @click="close">
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20">
+              <path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            </svg>
+          </button>
         </header>
-        <TaskForm v-if="mode === 'task'" ref="taskForm" :child="child" :initial="editingTask" :error="error" @submit="submit" />
-        <BehaviorForm v-else ref="behaviorForm" :child="child" :initial="editingBehavior" :error="error" @submit="submit" />
+        <div v-if="!editingTask && !editingBehavior" class="mode-bar" role="tablist" aria-label="记录类型">
+          <button type="button" role="tab" :aria-selected="mode === 'task'" :class="{ active: mode === 'task' }" @click="switchMode('task')">
+            作业 / 待办
+          </button>
+          <button type="button" role="tab" :aria-selected="mode === 'behavior'" :class="{ active: mode === 'behavior' }" @click="switchMode('behavior')">
+            在校表现
+          </button>
+        </div>
+        <div class="sheet-body">
+          <TaskForm v-if="mode === 'task'" ref="taskForm" :child="child" :initial="editingTask" :error="error" @submit="submit" />
+          <BehaviorForm v-else ref="behaviorForm" :child="child" :initial="editingBehavior" :error="error" @submit="submit" />
+        </div>
       </section>
     </div>
   </Teleport>
 </template>
 
 <style scoped>
-.backdrop { position: fixed; inset: 0; z-index: 50; background: rgb(0 0 0 / 40%); display: flex; align-items: flex-end; justify-content: center; }
-.sheet { width: min(100%, 640px); max-height: 92dvh; overflow-y: auto; background: var(--bg); border-radius: 20px 20px 0 0; padding: 16px 18px calc(18px + env(safe-area-inset-bottom)); box-shadow: 0 -12px 32px rgb(0 0 0 / 16%); }
-.head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.head h2 { margin: 0; font-size: 17px; }
-.head button { width: 36px; height: 36px; border: 0; border-radius: 50%; background: var(--surface); font-size: 20px; }
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: var(--scrim);
+  backdrop-filter: blur(2px);
+}
+
+.sheet {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 640px);
+  max-height: 92dvh;
+  overflow: hidden;
+  padding: 6px var(--space-4) 0;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  background: var(--surface);
+  box-shadow: var(--shadow-3);
+  animation: sheet-up var(--duration-base) var(--ease-out);
+}
+
+.handle {
+  width: 36px;
+  height: 4px;
+  flex: none;
+  margin: 4px auto 0;
+  border-radius: var(--radius-pill);
+  background: var(--line-strong);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: none;
+  padding: var(--space-3) 0 var(--space-2);
+}
+
+.head h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.close {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+.mode-bar {
+  display: flex;
+  flex: none;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+}
+
+.mode-bar button {
+  flex: 1;
+  min-height: 38px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.mode-bar button.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-1);
+}
+
+.sheet-body {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-3) 0 calc(var(--space-4) + env(safe-area-inset-bottom));
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(28px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
 </style>

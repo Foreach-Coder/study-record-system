@@ -1,4 +1,4 @@
-﻿import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { login, seedChild } from "./helpers";
 
 async function cleanupChild(page: Page, nickname: string) {
@@ -20,7 +20,7 @@ test("shows empty state and fits a phone", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/tasks");
 
-    await expect(page.getByText("还没有记录。")).toBeVisible();
+    await expect(page.getByText("没有符合条件的记录")).toBeVisible();
     await expect(page.getByRole("navigation", { name: "主导航" })).toBeVisible();
 
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -53,11 +53,11 @@ test("shows loading, then a retryable error", async ({ page }) => {
     });
 
     await page.goto("/tasks");
-    await expect(page.getByText("加载中…")).toBeVisible();
+    await expect(page.getByRole("status", { name: "加载中" })).toBeVisible();
     await expect(page.getByRole("alert")).toContainText("加载失败");
     fail = false;
     await page.getByRole("button", { name: "重试" }).click();
-    await expect(page.getByText("还没有记录。")).toBeVisible();
+    await expect(page.getByText("没有符合条件的记录")).toBeVisible();
   } finally {
     await cleanupChild(page, nickname);
   }

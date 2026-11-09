@@ -4,7 +4,6 @@ import { useRouter } from "vue-router";
 import type { Task } from "../../shared/schema";
 import { groupTasks, todayTasks } from "../../shared/grouping";
 import { computeHorizon } from "../../shared/horizon";
-import { progress } from "../../shared/labels";
 import { api, ApiError } from "../api";
 import ProgressCard from "../components/ProgressCard.vue";
 import EmptyState from "../components/EmptyState.vue";
@@ -17,9 +16,18 @@ const tasks = computed(() => todayList());
 const groups = computed(() => groupTasks(tasks.value));
 const stats = computed(() => {
   if (!today.value) return { total: 0, done: 0, percent: 0 };
-  return progress(todayTasks(visibleTasks(), today.value, computeHorizon(today.value), true), today.value);
+  const scope = todayTasks(visibleTasks(), today.value, computeHorizon(today.value), true);
+  const done = scope.filter(
+    (task) => task.completed && (task.dueDate === today.value || task.startDate === today.value),
+  ).length;
+  const total = scope.filter((task) => !task.completed).length + done;
+  return { total, done, percent: total === 0 ? 0 : Math.round((done / total) * 100) };
 });
-const recent = computed(() => visibleBehaviors().slice(0, 3));
+const recent = computed(() =>
+  [...visibleBehaviors()]
+    .sort((a, b) => b.occurredOn.localeCompare(a.occurredOn) || b.createdAt.localeCompare(a.createdAt))
+    .slice(0, 3),
+);
 
 function fail(error: unknown) {
   store.error = error instanceof ApiError ? error.message : "操作失败";
@@ -33,30 +41,13 @@ async function toggle(task: Task) {
     fail(error);
   }
 }
-
-async function check(task: Task) {
-  try {
-    await api.updateTask(task.id, { checked: !task.checked });
-    await refresh();
-  } catch (error) {
-    fail(error);
-  }
-}
-
-async function remove(task: Task) {
-  try {
-    await api.deleteTask(task.id);
-    await refresh();
-  } catch (error) {
-    fail(error);
-  }
-}
 </script>
 
 <template>
   <div>
     <ProgressCard v-bind="stats" />
-    <EmptyState v-if="tasks.length === 0" title="今天没有任务。" />
+
+    <EmptyState v-if="tasks.length === 0" title="今天没有任务" message="可以休息一下，或点右下角“记录”添加。" />
     <TaskGroup
       v-for="group in groups"
       :key="group.key"
@@ -64,22 +55,90 @@ async function remove(task: Task) {
       :today="today"
       @open="router.push(`/tasks/${$event.id}`)"
       @toggle="toggle"
-      @check="check"
-      @remove="remove"
     />
+
     <section v-if="recent.length" class="recent">
-      <h2>最近表现</h2>
-      <article v-for="item in recent" :key="item.id">
-        <strong>{{ item.title }}</strong>
-        <span>{{ item.occurredOn }}</span>
-      </article>
+      <div class="recent-head">
+        <h2>最近表现</h2>
+        <button type="button" class="text-link" @click="router.push('/behaviors')">全部</button>
+      </div>
+      <div class="recent-list">
+        <article v-for="item in recent" :key="item.id">
+          <span class="dot" aria-hidden="true" />
+          <strong>{{ item.title }}</strong>
+          <span class="date">{{ item.occurredOn.slice(5) }}</span>
+        </article>
+      </div>
     </section>
   </div>
 </template>
 
 <style scoped>
-.recent { margin-top: 28px; }
-.recent h2 { font-size: 13px; color: var(--muted); font-weight: 500; }
-.recent article { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
-.recent span { color: var(--muted); font-size: 12px; }
+.recent {
+  margin-top: var(--space-6);
+}
+
+.recent-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.recent h2 {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.text-link {
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  font-size: var(--text-xs);
+}
+
+.recent-list {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.recent article {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 52px;
+  padding: 10px var(--space-3);
+  border-bottom: 1px solid var(--line);
+}
+
+.recent article:last-child {
+  border-bottom: 0;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--success);
+}
+
+.recent strong {
+  flex: 1;
+  overflow: hidden;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.date {
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
 </style>

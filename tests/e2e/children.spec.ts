@@ -7,7 +7,7 @@ test("adds and renames a child", async ({ page }) => {
   const nickname = `小管理${Date.now()}`;
   const renamed = `${nickname}改`;
   await login(page);
-  await page.getByRole("button", { name: "管理孩子" }).click();
+  await page.getByRole("button", { name: "档案管理" }).click();
   const dialog = page.getByRole("dialog", { name: "管理孩子" });
   await dialog.getByLabel("新孩子昵称").fill(nickname);
   await dialog.getByRole("button", { name: "添加" }).click();
@@ -31,7 +31,7 @@ test("keeps orphan tasks after deleting a child", async ({ page }) => {
     { kind: "task", data: { child: nickname, title, body: "", type: "todo", dueDate: today, startDate: today } },
   ]);
   await page.goto("/tasks");
-  await page.getByRole("button", { name: "管理孩子" }).click();
+  await page.getByRole("button", { name: "档案管理" }).click();
   const dialog = page.getByRole("dialog", { name: "管理孩子" });
   page.once("dialog", (confirm) => confirm.accept());
   await dialog.locator("li", { hasText: nickname }).getByRole("button", { name: "删除" }).click();

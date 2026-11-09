@@ -15,10 +15,11 @@ test("lists behaviors, shows stats, and opens a detail", async ({ page }) => {
   await page.goto("/behaviors");
 
   await expect(page.getByRole("heading", { name: "在校表现" })).toBeVisible();
-  await expect(page.getByLabel("时间范围")).toHaveValue("30");
-  await expect(page.getByText("1 条")).toBeVisible();
-  await expect(page.getByText("1 正向")).toBeVisible();
-  await expect(page.getByText("0 需关注")).toBeVisible();
+  await expect(page.getByRole("tab", { name: "30 天" })).toHaveAttribute("aria-selected", "true");
+  const stats = page.getByLabel("表现统计");
+  await expect(stats.locator("strong").nth(0)).toHaveText("1");
+  await expect(stats.locator("strong").nth(1)).toHaveText("1");
+  await expect(stats.locator("strong").nth(2)).toHaveText("0");
   await expect(page.getByText("主动帮同学")).toBeVisible();
 
   await page.getByRole("button", { name: /主动帮同学/ }).click();

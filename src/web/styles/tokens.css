@@ -1,35 +1,114 @@
 :root {
   color-scheme: light;
-  --bg: #f5f2ea;
-  --surface: #fffdf8;
-  --surface-2: #ece6da;
-  --text: #24221e;
-  --muted: #6f6a60;
-  --line: #ded7c9;
-  --accent: #c4552f;
-  --accent-soft: #f4d9c8;
-  --ok: #3f6b4f;
-  --warn: #a36a1f;
-  --danger: #a33a2c;
-  --radius: 18px;
-  --shadow: 0 10px 30px rgb(52 44 32 / 10%);
-  --tap: 44px;
+
+  /* HarmonyOS system palette */
+  --primary: #007dff;
+  --primary-pressed: #0068d8;
+  --primary-soft: #e6f0ff;
+  --primary-soft-strong: #cfe3ff;
+  --on-primary: #ffffff;
+
+  --bg: #f1f3f5;
+  --bg-elevated: #f7f8fa;
+  --surface: #ffffff;
+  --surface-2: #f7f8fa;
+  --surface-3: #eef1f4;
+  --text: #182431;
+  --text-secondary: #4d5866;
+  --muted: #66707d;
+  --line: #e5e8eb;
+  --line-strong: #d7dce1;
+
+  --success: #64bb5c;
+  --success-soft: #eaf6e8;
+  --warning: #ffb300;
+  --warning-soft: #fff5db;
+  --danger: #fa2a2d;
+  --danger-soft: #ffebeb;
+
+  /* Backwards-compatible aliases used across the app */
+  --accent: var(--primary);
+  --accent-soft: var(--primary-soft);
+  --ok: var(--success);
+  --warn: var(--warning);
+  --danger-text: var(--danger);
+
+  --font: "HarmonyOS Sans SC", "HarmonyOS Sans", "Noto Sans SC", "PingFang SC",
+    "Microsoft YaHei", sans-serif;
+  --font-numeric: "HarmonyOS Sans SC", "DIN Alternate", "SF Pro Display", sans-serif;
+
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-3xl: 30px;
+  --text-4xl: 36px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-pill: 999px;
+  --radius: var(--radius-lg);
+
+  --shadow-1: 0 1px 2px rgb(16 24 40 / 4%);
+  --shadow-2: 0 4px 16px rgb(16 24 40 / 7%);
+  --shadow-3: 0 12px 32px rgb(16 24 40 / 12%);
+  --shadow: var(--shadow-2);
+  --scrim: rgb(0 0 0 / 42%);
+
+  --tap: 48px;
+  --header-height: 64px;
+  --tab-height: 64px;
+  --rail-width: 88px;
+  --page-max: 960px;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --duration-fast: 160ms;
+  --duration-base: 240ms;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --bg: #1b1a18;
-    --surface: #24221f;
-    --surface-2: #302d28;
-    --text: #f4efe4;
-    --muted: #b7ad9c;
-    --line: #403b33;
-    --accent: #e07a52;
-    --accent-soft: #4a2d24;
-    --ok: #8fbe9f;
-    --warn: #d6a75f;
-    --danger: #e08a7d;
-    --shadow: 0 10px 30px rgb(0 0 0 / 25%);
+    --primary: #3d8bff;
+    --primary-pressed: #5a9dff;
+    --primary-soft: #10243f;
+    --primary-soft-strong: #17365c;
+    --on-primary: #ffffff;
+
+    --bg: #000000;
+    --bg-elevated: #111111;
+    --surface: #1a1a1a;
+    --surface-2: #242424;
+    --surface-3: #2d2d2d;
+    --text: #e6e6e6;
+    --text-secondary: #c7c7c7;
+    --muted: #a3a3a3;
+    --line: #333333;
+    --line-strong: #444444;
+
+    --success: #7fd478;
+    --success-soft: #142a13;
+    --warning: #ffc94d;
+    --warning-soft: #2c2410;
+    --danger: #ff6b6e;
+    --danger-soft: #331516;
+
+    --shadow-1: 0 1px 2px rgb(0 0 0 / 30%);
+    --shadow-2: 0 4px 16px rgb(0 0 0 / 36%);
+    --shadow-3: 0 12px 32px rgb(0 0 0 / 48%);
+    --scrim: rgb(0 0 0 / 68%);
   }
 }

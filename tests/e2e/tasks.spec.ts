@@ -19,20 +19,23 @@ test("lists tasks, filters, and opens a detail", async ({ page }) => {
   await expect(page.getByRole("button", { name: /数学口算/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /带跳绳/ })).toBeVisible();
 
-  await page.getByRole("button", { name: "作业" }).click();
+  await page.getByRole("button", { name: "全部类型" }).click();
+  await page.getByRole("button", { name: "作业", exact: true }).click();
   await expect(page.getByRole("button", { name: /数学口算/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /带跳绳/ })).toHaveCount(0);
 
-  await page.getByRole("button", { name: "待办" }).click();
+  await page.getByRole("button", { name: "作业", exact: true }).click();
+  await page.getByRole("button", { name: "待办", exact: true }).click();
   await expect(page.getByRole("button", { name: /数学口算/ })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /带跳绳/ })).toBeVisible();
 
-  await page.getByRole("button", { name: "全部类型" }).click();
+  await page.getByRole("button", { name: "待办", exact: true }).click();
+  await page.getByRole("button", { name: "全部类型", exact: true }).click();
   await expect(page.getByRole("button", { name: /数学口算/ })).toBeVisible();
 
-  await page.getByRole("button", { name: /^已完成/ }).click();
+  await page.getByRole("tab", { name: /^已完成/ }).click();
   await expect(page.getByRole("button", { name: /数学口算/ })).toHaveCount(0);
-  await page.getByRole("button", { name: /^待做/ }).click();
+  await page.getByRole("tab", { name: /^待做/ }).click();
   await expect(page.getByRole("button", { name: /数学口算/ })).toBeVisible();
 
   await page.getByRole("button", { name: /数学口算/ }).click();
@@ -43,8 +46,9 @@ test("lists tasks, filters, and opens a detail", async ({ page }) => {
   await expect(page.getByText(`${today} 截止`)).toBeVisible();
   await expect(page.getByRole("heading", { name: "要求" })).toBeVisible();
 
-  await page.getByRole("button", { name: "编辑" }).click();
-  await expect(page.getByRole("heading", { name: "编辑作业或待办" })).toBeVisible();
+  await page.locator('summary[aria-label="更多操作"]').click();
+  await page.getByRole("button", { name: "编辑", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "编辑作业/待办" })).toBeVisible();
   await page.getByLabel("标题").fill("数学口算（改）");
   await page.getByRole("button", { name: "保存" }).click();
   await expect(page.getByRole("heading", { name: "数学口算（改）" })).toBeVisible();

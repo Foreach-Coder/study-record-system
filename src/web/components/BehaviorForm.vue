@@ -109,39 +109,151 @@ function submit() {
 
 <template>
   <form class="form" @submit.prevent="submit">
-    <label>标题<input v-model.trim="draft.title" required maxlength="200" /></label>
-    <label>日期<input v-model="draft.occurredOn" type="date" required /></label>
-    <label>
-      维度
-      <select v-model="draft.dimension">
-        <option v-for="item in DIMENSIONS" :key="item">{{ item }}</option>
-      </select>
+    <label class="field">
+      <span>标题</span>
+      <input v-model.trim="draft.title" required maxlength="200" placeholder="例如：主动帮同学捡书" />
     </label>
-    <label>
-      语气
-      <select v-model="draft.tone">
-        <option v-for="item in TONES" :key="item">{{ item }}</option>
-      </select>
+
+    <div class="grid">
+      <label class="field">
+        <span>日期</span>
+        <input v-model="draft.occurredOn" type="date" required />
+      </label>
+      <label class="field">
+        <span>维度</span>
+        <select v-model="draft.dimension">
+          <option v-for="item in DIMENSIONS" :key="item">{{ item }}</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="field">
+      <span>倾向</span>
+      <div class="tone-switch" role="group" aria-label="倾向">
+        <button
+          v-for="item in TONES"
+          :key="item"
+          type="button"
+          :class="[item === '正向' ? 'positive' : item === '需关注' ? 'attention' : 'neutral', { active: draft.tone === item }]"
+          :aria-pressed="draft.tone === item"
+          @click="draft.tone = item"
+        >
+          {{ item }}
+        </button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <label class="field">
+        <span>来源</span>
+        <select v-model="draft.source">
+          <option v-for="item in SOURCES" :key="item">{{ item }}</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>谁记录的</span>
+        <input v-model="draft.createdBy" maxlength="50" placeholder="爸爸 / 妈妈" />
+      </label>
+    </div>
+
+    <label class="field">
+      <span>正文</span>
+      <textarea v-model="draft.body" rows="6" placeholder="支持 Markdown，可以直接粘贴图片" />
     </label>
-    <label>
-      来源
-      <select v-model="draft.source">
-        <option v-for="item in SOURCES" :key="item">{{ item }}</option>
-      </select>
-    </label>
-    <label>正文<textarea v-model="draft.body" rows="5" placeholder="支持 Markdown" /></label>
+
     <ImagePicker v-model="draft.images" @insert="draft.body += $event" />
-    <label>谁记录的<input v-model="draft.createdBy" maxlength="50" /></label>
+
     <p v-if="error" class="error">{{ error }}</p>
-    <button type="submit">保存</button>
+
+    <div class="actions">
+      <button type="submit" class="btn primary">保存</button>
+    </div>
   </form>
 </template>
 
 <style scoped>
-.form { display: grid; gap: 12px; }
-label { display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
-input, select, textarea { min-height: var(--tap); border: 1px solid var(--line); border-radius: 10px; background: var(--bg); padding: 8px 12px; color: var(--text); }
-textarea { min-height: 110px; resize: vertical; }
-button { min-height: var(--tap); border: 0; border-radius: 12px; background: var(--accent); color: white; font-weight: 600; }
-.error { color: var(--danger); }
+.form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.field > span {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.tone-switch {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+}
+
+.tone-switch button {
+  min-height: 38px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.tone-switch button.active {
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+.tone-switch .positive.active {
+  color: var(--success);
+}
+
+.tone-switch .attention.active {
+  color: var(--warning);
+}
+
+.tone-switch .neutral.active {
+  color: var(--text);
+}
+
+.error {
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--text-sm);
+}
+
+.actions {
+  position: sticky;
+  bottom: calc(-1 * var(--space-4));
+  z-index: 2;
+  padding: var(--space-3) 0 var(--space-2);
+  background: linear-gradient(to bottom, transparent, var(--surface) 24%);
+}
+
+.actions .btn {
+  width: 100%;
+  min-height: 48px;
+  font-size: var(--text-base);
+}
+
+@media (max-width: 380px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

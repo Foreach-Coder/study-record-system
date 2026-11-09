@@ -10,9 +10,9 @@ const router = useRouter();
 
 const syncLabel = computed(() => {
   const value = store.state?.syncCutoffAt;
-  if (!value) return "信息同步截至 尚未同步";
+  if (!value) return "尚未同步";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "信息同步截至 尚未同步";
+  if (Number.isNaN(date.getTime())) return "尚未同步";
   const text = new Intl.DateTimeFormat("zh-CN", {
     timeZone: "Asia/Shanghai",
     month: "2-digit",
@@ -21,7 +21,7 @@ const syncLabel = computed(() => {
     minute: "2-digit",
     hour12: false,
   }).format(date);
-  return `信息同步截至 ${text}`;
+  return text;
 });
 
 async function logout() {
@@ -39,23 +39,142 @@ async function logout() {
 
 <template>
   <header class="app-header">
-    <div>
-      <p class="eyebrow">学习记录</p>
+    <div class="heading">
       <h1>{{ title }}</h1>
-      <p class="sync">{{ syncLabel }}</p>
+      <p class="sync" :class="{ 'sync--empty': syncLabel === '尚未同步' }">
+        <span class="sync-dot" aria-hidden="true" />
+        信息同步 {{ syncLabel }}
+      </p>
     </div>
     <div class="actions">
       <ChildSwitcher />
-      <button type="button" class="ghost" @click="logout">退出登录</button>
+      <details class="menu">
+        <summary class="icon-btn" aria-label="更多">
+          <svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22">
+            <circle cx="5" cy="12" r="1.6" fill="currentColor" />
+            <circle cx="12" cy="12" r="1.6" fill="currentColor" />
+            <circle cx="19" cy="12" r="1.6" fill="currentColor" />
+          </svg>
+        </summary>
+        <div class="menu-panel">
+          <button type="button" @click="logout">退出登录</button>
+        </div>
+      </details>
     </div>
   </header>
 </template>
 
 <style scoped>
-.app-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 18px 0 10px; }
-.eyebrow { margin: 0 0 4px; color: var(--accent); font-size: 12px; letter-spacing: .16em; }
-h1 { margin: 0; font-size: clamp(24px, 5vw, 34px); }
-.sync { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
-.actions { display: flex; align-items: center; gap: 8px; }
-.ghost { min-height: var(--tap); border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 0 12px; color: var(--muted); }
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: var(--header-height);
+  padding: var(--space-4) 0 var(--space-3);
+  background: color-mix(in srgb, var(--bg) 86%, transparent);
+  backdrop-filter: blur(18px);
+}
+
+.heading {
+  min-width: 0;
+}
+
+h1 {
+  margin: 0;
+  overflow: hidden;
+  font-size: clamp(26px, 6vw, 34px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sync {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: var(--space-1) 0 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.sync-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+}
+
+.sync--empty .sync-dot {
+  background: var(--muted);
+}
+
+.actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.menu {
+  position: relative;
+}
+
+.menu summary {
+  list-style: none;
+}
+
+.menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.menu-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 148px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-3);
+}
+
+.menu-panel button {
+  width: 100%;
+  min-height: 42px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  padding: 0 var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.menu-panel button:hover {
+  background: var(--surface-2);
+}
+
+@media (max-width: 560px) {
+  .app-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .menu {
+    margin-left: auto;
+  }
+}
 </style>
