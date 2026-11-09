@@ -102,7 +102,8 @@ function reset() {
 defineExpose({ reset });
 
 function submit() {
-  emit("submit", { ...draft, childId: props.initial?.childId ?? props.child?.id, images: draft.images });
+  // 图片已经由 ImagePicker 写入正文；附件字段只给文件类使用。
+  emit("submit", { ...draft, childId: props.initial?.childId ?? props.child?.id, images: [] });
 }
 </script>
 
