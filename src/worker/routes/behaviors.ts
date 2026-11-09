@@ -41,6 +41,7 @@ function draftFromRow(row: Behavior) {
     tone: row.tone,
     source: row.source,
     images: row.images,
+    attachments: row.attachments,
     createdBy: row.createdBy,
   };
 }
@@ -70,8 +71,8 @@ export async function createBehavior(request: Request, env: Env): Promise<Respon
     table: "behaviors",
     id,
     statements: [env.DB.prepare(
-      "INSERT INTO behaviors (id, child_id, child_name, title, body, occurred_on, dimension, tone, source, images, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    ).bind(id, child.id, child.nickname, result.value.title, result.value.body, result.value.occurredOn, result.value.dimension, result.value.tone, result.value.source, JSON.stringify(result.value.images), result.value.createdBy, now, now)],
+      "INSERT INTO behaviors (id, child_id, child_name, title, body, occurred_on, dimension, tone, source, images, attachments, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    ).bind(id, child.id, child.nickname, result.value.title, result.value.body, result.value.occurredOn, result.value.dimension, result.value.tone, result.value.source, JSON.stringify(result.value.images), JSON.stringify(result.value.attachments), result.value.createdBy, now, now)],
     read: () => readBehavior(env, id),
     expected: {
       childName: child.nickname,
@@ -82,6 +83,7 @@ export async function createBehavior(request: Request, env: Env): Promise<Respon
       tone: result.value.tone,
       source: result.value.source,
       images: result.value.images,
+      attachments: result.value.attachments,
       createdBy: result.value.createdBy,
     },
     audit: audit(auth, "create", id),
@@ -106,8 +108,8 @@ export async function updateBehavior(request: Request, env: Env): Promise<Respon
     table: "behaviors",
     id,
     statements: [env.DB.prepare(
-      "UPDATE behaviors SET child_id = ?, child_name = ?, title = ?, body = ?, occurred_on = ?, dimension = ?, tone = ?, source = ?, images = ?, created_by = ?, updated_at = ? WHERE id = ?",
-    ).bind(child.id, child.nickname, result.value.title, result.value.body, result.value.occurredOn, result.value.dimension, result.value.tone, result.value.source, JSON.stringify(result.value.images), result.value.createdBy, now, id)],
+      "UPDATE behaviors SET child_id = ?, child_name = ?, title = ?, body = ?, occurred_on = ?, dimension = ?, tone = ?, source = ?, images = ?, attachments = ?, created_by = ?, updated_at = ? WHERE id = ?",
+    ).bind(child.id, child.nickname, result.value.title, result.value.body, result.value.occurredOn, result.value.dimension, result.value.tone, result.value.source, JSON.stringify(result.value.images), JSON.stringify(result.value.attachments), result.value.createdBy, now, id)],
     read: () => readBehavior(env, id),
     expected: {
       childName: child.nickname,
@@ -118,6 +120,7 @@ export async function updateBehavior(request: Request, env: Env): Promise<Respon
       tone: result.value.tone,
       source: result.value.source,
       images: result.value.images,
+      attachments: result.value.attachments,
       createdBy: result.value.createdBy,
     },
     audit: audit(auth, "update", id),

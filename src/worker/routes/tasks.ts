@@ -43,6 +43,7 @@ function draftFromRow(row: Task) {
     completed: row.completed,
     checked: row.checked,
     images: row.images,
+    attachments: row.attachments,
     createdBy: row.createdBy,
   };
 }
@@ -76,8 +77,8 @@ export async function createTask(request: Request, env: Env): Promise<Response> 
     table: "tasks",
     id,
     statements: [env.DB.prepare(
-      "INSERT INTO tasks (id, child_id, child_name, title, body, type, subject, due_date, start_date, completed, checked, images, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    ).bind(id, child.id, child.nickname, result.value.title, result.value.body, result.value.type, result.value.subject, result.value.dueDate, startDate, result.value.completed ? 1 : 0, result.value.checked ? 1 : 0, JSON.stringify(result.value.images), result.value.createdBy, now, now)],
+      "INSERT INTO tasks (id, child_id, child_name, title, body, type, subject, due_date, start_date, completed, checked, images, attachments, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    ).bind(id, child.id, child.nickname, result.value.title, result.value.body, result.value.type, result.value.subject, result.value.dueDate, startDate, result.value.completed ? 1 : 0, result.value.checked ? 1 : 0, JSON.stringify(result.value.images), JSON.stringify(result.value.attachments), result.value.createdBy, now, now)],
     read: () => readTask(env, id),
     expected: {
       childName: child.nickname,
@@ -90,6 +91,7 @@ export async function createTask(request: Request, env: Env): Promise<Response> 
       completed: result.value.completed,
       checked: result.value.checked,
       images: result.value.images,
+      attachments: result.value.attachments,
       createdBy: result.value.createdBy,
     },
     audit: audit(auth, "create", id),
@@ -117,8 +119,8 @@ export async function updateTask(request: Request, env: Env): Promise<Response> 
     table: "tasks",
     id,
     statements: [env.DB.prepare(
-      "UPDATE tasks SET child_id = ?, child_name = ?, title = ?, body = ?, type = ?, subject = ?, due_date = ?, start_date = ?, completed = ?, checked = ?, images = ?, created_by = ?, updated_at = ? WHERE id = ?",
-    ).bind(child.id, child.nickname, result.value.title, result.value.body, result.value.type, result.value.subject, result.value.dueDate, startDate, result.value.completed ? 1 : 0, result.value.checked ? 1 : 0, JSON.stringify(result.value.images), result.value.createdBy, now, id)],
+      "UPDATE tasks SET child_id = ?, child_name = ?, title = ?, body = ?, type = ?, subject = ?, due_date = ?, start_date = ?, completed = ?, checked = ?, images = ?, attachments = ?, created_by = ?, updated_at = ? WHERE id = ?",
+    ).bind(child.id, child.nickname, result.value.title, result.value.body, result.value.type, result.value.subject, result.value.dueDate, startDate, result.value.completed ? 1 : 0, result.value.checked ? 1 : 0, JSON.stringify(result.value.images), JSON.stringify(result.value.attachments), result.value.createdBy, now, id)],
     read: () => readTask(env, id),
     expected: {
       childName: child.nickname,
@@ -131,6 +133,7 @@ export async function updateTask(request: Request, env: Env): Promise<Response> 
       completed: result.value.completed,
       checked: result.value.checked,
       images: result.value.images,
+      attachments: result.value.attachments,
       createdBy: result.value.createdBy,
     },
     audit: audit(auth, "update", id),

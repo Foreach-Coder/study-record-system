@@ -22,6 +22,39 @@ async function upload(body: FormData = form()): Promise<Response> {
   return SELF.fetch(`${BASE}/api/images`, { method: "POST", headers: { ...AUTH, origin: BASE }, body });
 }
 
+function fileForm(bytes: Uint8Array, name = "test.pdf", type = "application/pdf"): FormData {
+  const data = new FormData();
+  data.append("file", new File([bytes.buffer as ArrayBuffer], name, { type }));
+  return data;
+}
+
+describe("files", () => {
+  it("uploads a PDF and serves it as an attachment with auth", async () => {
+    const bytes = new TextEncoder().encode("%PDF-1.4\nminimal\n%%EOF");
+    const response = await SELF.fetch(`${BASE}/api/files`, { method: "POST", headers: { ...AUTH, origin: BASE }, body: fileForm(bytes) });
+    expect(response.status).toBe(201);
+    const body = (await response.json()) as { name: string; url: string; size: number; type: string };
+    expect(body.name).toBe("test.pdf");
+    expect(body.type).toBe("application/pdf");
+    expect(body.size).toBe(bytes.byteLength);
+    expect(body.url).toMatch(/^\/media\/files\/[a-f0-9]{64}\.pdf$/);
+
+    const anonymous = await SELF.fetch(`${BASE}${body.url}`);
+    expect(anonymous.status).toBe(401);
+
+    const media = await SELF.fetch(`${BASE}${body.url}`, { headers: AUTH });
+    expect(media.status).toBe(200);
+    expect(media.headers.get("content-type")).toBe("application/pdf");
+    expect(media.headers.get("content-disposition")).toContain("attachment");
+    expect(new Uint8Array(await media.arrayBuffer())).toEqual(bytes);
+  });
+
+  it("rejects unsupported file extensions", async () => {
+    const response = await SELF.fetch(`${BASE}/api/files`, { method: "POST", headers: { ...AUTH, origin: BASE }, body: fileForm(new Uint8Array([1]), "bad.exe", "application/octet-stream") });
+    expect(response.status).toBe(415);
+  });
+});
+
 describe("images", () => {
   it("uploads, deduplicates and serves media with auth", async () => {
     const first = await upload();

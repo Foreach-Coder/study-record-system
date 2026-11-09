@@ -1,4 +1,4 @@
-import type { Behavior, Child, Task, TaskImage } from "../shared/schema";
+import type { Attachment, Behavior, Child, Task, TaskImage } from "../shared/schema";
 import type { Env } from "./env";
 
 export type Row = Record<string, unknown>;
@@ -11,6 +11,25 @@ export function parseImages(value: unknown): TaskImage[] {
     return parsed
       .filter((item): item is { url: string; title?: unknown } => Boolean(item) && typeof item === "object" && typeof (item as { url?: unknown }).url === "string")
       .map((item) => ({ url: item.url, title: typeof item.title === "string" ? item.title : null }));
+  } catch {
+    return [];
+  }
+}
+
+export function parseAttachments(value: unknown): Attachment[] {
+  if (typeof value !== "string") return [];
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object")
+      .map((item) => ({
+        name: String(item.name ?? "附件"),
+        url: String(item.url ?? ""),
+        size: Number(item.size ?? 0),
+        type: String(item.type ?? "application/octet-stream"),
+      }))
+      .filter((item) => item.url.startsWith("/media/files/"));
   } catch {
     return [];
   }
@@ -43,6 +62,7 @@ export function taskFromRow(row: Row): Task {
     completed: Number(row.completed) === 1,
     checked: Number(row.checked) === 1,
     images: parseImages(row.images),
+    attachments: parseAttachments(row.attachments),
     createdBy: row.created_by == null ? null : String(row.created_by),
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
@@ -61,6 +81,7 @@ export function behaviorFromRow(row: Row): Behavior {
     tone: row.tone == null ? null : (row.tone as Behavior["tone"]),
     source: row.source == null ? null : (row.source as Behavior["source"]),
     images: parseImages(row.images),
+    attachments: parseAttachments(row.attachments),
     createdBy: row.created_by == null ? null : String(row.created_by),
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),

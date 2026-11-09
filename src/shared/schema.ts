@@ -17,6 +17,13 @@ export type Source = (typeof SOURCES)[number];
 
 export interface TaskImage { url: string; title: string | null; }
 
+export interface Attachment {
+  name: string;
+  url: string;
+  size: number;
+  type: string;
+}
+
 export interface Child {
   id: string;
   nickname: string;
@@ -41,6 +48,7 @@ export interface Task {
   completed: boolean;
   checked: boolean;
   images: TaskImage[];
+  attachments: Attachment[];
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
@@ -57,6 +65,7 @@ export interface Behavior {
   tone: Tone | null;
   source: Source | null;
   images: TaskImage[];
+  attachments: Attachment[];
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;

@@ -1,0 +1,2 @@
+ALTER TABLE tasks ADD COLUMN attachments TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE behaviors ADD COLUMN attachments TEXT NOT NULL DEFAULT '[]';

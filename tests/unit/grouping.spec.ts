@@ -7,7 +7,7 @@ function task(over: Partial<Task>): Task {
   return {
     id: over.id ?? "t1", childId: "c1", childName: "李律研", title: "任务", body: "",
     type: "homework", subject: "语文", dueDate: "2026-11-08", startDate: "2026-11-07",
-    completed: false, checked: false, images: [], createdBy: null,
+    completed: false, checked: false, images: [], attachments: [], createdBy: null,
     createdAt: "2026-11-07T00:00:00.000Z", updatedAt: "2026-11-07T00:00:00.000Z",
     ...over,
   };

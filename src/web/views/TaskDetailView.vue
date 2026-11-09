@@ -17,6 +17,12 @@ const entry = ref<InstanceType<typeof EntrySheet> | null>(null);
 const today = todayInShanghai();
 const canDelay = computed(() => !!task.value && !task.value.completed && task.value.dueDate < today);
 
+function formatBytes(size: number): string {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / 1024 / 1024).toFixed(1)} MB`;
+}
+
 function fail(reason: unknown) {
   error.value = reason instanceof ApiError ? reason.message : "操作失败，请重试";
 }
@@ -81,6 +87,16 @@ async function removeConfirmed() {
     </div>
     <p v-if="error" class="error">{{ error }}</p>
     <MarkdownView :body="task.body || '没有正文'" />
+    <div v-if="task.attachments.length" class="attachments">
+      <h2>附件</h2>
+      <ul>
+        <li v-for="attachment in task.attachments" :key="attachment.url">
+          <a :href="attachment.url" :download="attachment.name">
+            {{ attachment.name }}<span>{{ formatBytes(attachment.size) }}</span>
+          </a>
+        </li>
+      </ul>
+    </div>
     <EntrySheet ref="entry" />
     <div v-if="confirming" class="dialog" role="dialog" aria-label="确认删除">
       <p>删除后无法恢复，确定要删除「{{ task.title }}」吗？</p>
@@ -102,6 +118,11 @@ h1 { margin: 4px 0 8px; font-size: clamp(24px, 6vw, 36px); }
 .actions button:disabled { opacity: .5; }
 .actions .danger { background: var(--danger); border-color: var(--danger); color: white; }
 .error { color: var(--danger); }
+.attachments { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+.attachments h2 { font-size: 16px; margin: 0 0 10px; }
+.attachments ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.attachments a { display: flex; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); text-decoration: none; }
+.attachments a span { color: var(--muted); font-size: 12px; white-space: nowrap; }
 .dialog { margin-top: 16px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); display: grid; gap: 10px; }
 .dialog button { min-height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
 .dialog .danger { background: var(--danger); border-color: var(--danger); color: white; }

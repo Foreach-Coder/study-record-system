@@ -40,6 +40,7 @@ describe("tasks", () => {
       completed: false,
       checked: false,
       images: [],
+      attachments: [],
       createdBy: null,
       childName: "李律研",
     });
@@ -73,6 +74,19 @@ describe("tasks", () => {
     });
     expect(undo.status).toBe(200);
     expect(await undo.json()).toMatchObject({ completed: false, checked: false });
+  });
+
+  it("stores and returns attachments", async () => {
+    const attachment = { name: "练习.pdf", url: `/media/files/${"a".repeat(64)}.pdf`, size: 128, type: "application/pdf" };
+    const { body } = await create({ title: "附件测试", attachments: [attachment] });
+    expect(body.attachments).toEqual([attachment]);
+    const response = await SELF.fetch(`${BASE}/api/tasks/${body.id}`, {
+      method: "PATCH",
+      headers: HEADERS,
+      body: JSON.stringify({ attachments: [] }),
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ attachments: [] });
   });
 
   it("deletes a task", async () => {

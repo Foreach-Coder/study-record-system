@@ -6,7 +6,7 @@ import {
   normalizeType,
 } from "./aliases";
 import { addDays, parseDate, todayInShanghai } from "./dates";
-import type { Dimension, Source, Subject, TaskImage, TaskType, Tone } from "./schema";
+import type { Attachment, Dimension, Source, Subject, TaskImage, TaskType, Tone } from "./schema";
 
 export type ValidationResult<T> =
   | { ok: true; value: T }
@@ -28,6 +28,7 @@ export interface TaskDraft {
   completed: boolean;
   checked: boolean;
   images: TaskImage[];
+  attachments: Attachment[];
   createdBy: string | null;
 }
 
@@ -40,6 +41,7 @@ export interface BehaviorDraft {
   tone: Tone | null;
   source: Source | null;
   images: TaskImage[];
+  attachments: Attachment[];
   createdBy: string | null;
 }
 
@@ -202,6 +204,28 @@ function normalizeImages(
   return { ok: true, images };
 }
 
+function normalizeAttachments(
+  value: unknown,
+): { ok: true; attachments: Attachment[] } | { ok: false; message: string } {
+  if (value == null) return { ok: true, attachments: [] };
+  if (!Array.isArray(value)) return { ok: false, message: "附件必须是数组" };
+  if (value.length > 20) return { ok: false, message: "最多 20 个附件" };
+  const attachments: Attachment[] = [];
+  for (const item of value) {
+    const row = obj(item);
+    if (!row) return { ok: false, message: "附件格式不正确" };
+    const name = typeof row.name === "string" ? row.name.trim() : "";
+    const url = typeof row.url === "string" ? row.url : "";
+    const size = typeof row.size === "number" ? row.size : Number(row.size);
+    const type = typeof row.type === "string" ? row.type : "application/octet-stream";
+    if (!name || name.length > 200) return { ok: false, message: "附件名不能为空且不超过 200 字" };
+    if (!url.startsWith("/media/files/")) return { ok: false, message: "附件必须是本站 /media/files/ 路径" };
+    if (!Number.isFinite(size) || size < 0) return { ok: false, message: "附件大小不正确" };
+    attachments.push({ name, url, size, type });
+  }
+  return { ok: true, attachments };
+}
+
 export function validateTask(input: unknown, ctx: ValidationContext): ValidationResult<TaskDraft> {
   const data = obj(input);
   const fields: Record<string, string> = {};
@@ -244,6 +268,8 @@ export function validateTask(input: unknown, ctx: ValidationContext): Validation
   const createdBy = optionalText(data.createdBy, 50, fields, "createdBy", "创建人");
   const imageResult = normalizeImages(data.images);
   if (!imageResult.ok) fieldError(fields, "images", imageResult.message);
+  const attachmentResult = normalizeAttachments(data.attachments);
+  if (!attachmentResult.ok) fieldError(fields, "attachments", attachmentResult.message);
 
   let completed = data.completed === true;
   let checked = data.checked === true;
@@ -264,6 +290,7 @@ export function validateTask(input: unknown, ctx: ValidationContext): Validation
       completed,
       checked,
       images: imageResult.ok ? imageResult.images : [],
+      attachments: attachmentResult.ok ? attachmentResult.attachments : [],
       createdBy,
     },
   };
@@ -295,6 +322,8 @@ export function validateBehavior(
   const createdBy = optionalText(data.createdBy, 50, fields, "createdBy", "创建人");
   const imageResult = normalizeImages(data.images);
   if (!imageResult.ok) fieldError(fields, "images", imageResult.message);
+  const attachmentResult = normalizeAttachments(data.attachments);
+  if (!attachmentResult.ok) fieldError(fields, "attachments", attachmentResult.message);
 
   if (Object.keys(fields).length > 0) return { ok: false, fields };
   return {
@@ -308,6 +337,7 @@ export function validateBehavior(
       tone: normalizeTone(data.tone),
       source: normalizeSource(data.source),
       images: imageResult.ok ? imageResult.images : [],
+      attachments: attachmentResult.ok ? attachmentResult.attachments : [],
       createdBy,
     },
   };
