@@ -75,6 +75,7 @@ export interface AppState {
   schemaVersion: number;
   today: string;
   serverTime: string;
+  syncCutoffAt: string | null;
   children: Child[];
   tasks: Task[];
   behaviors: Behavior[];

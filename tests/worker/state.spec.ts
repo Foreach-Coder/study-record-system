@@ -27,12 +27,14 @@ describe("state", () => {
       schemaVersion: number;
       today: string;
       serverTime: string;
+      syncCutoffAt: string | null;
       children: { nickname: string }[];
       tasks: { id: string }[];
       behaviors: { id: string }[];
     };
     expect(body.schemaVersion).toBe(1);
     expect(body.today).toBe(todayInShanghai());
+    expect(body.syncCutoffAt).toBeNull();
     expect(Number.isNaN(Date.parse(body.serverTime))).toBe(false);
     expect(body.children.map((child) => child.nickname)).toEqual(["李律研"]);
     expect(body.tasks.map((task) => task.id)).toEqual(["t1", "t3", "t2"]);
@@ -44,5 +46,39 @@ describe("state", () => {
     expect(response.status).toBe(401);
     const body = (await response.json()) as { error: { code: string } };
     expect(body.error.code).toBe("unauthorized");
+  });
+
+  it("records the latest synced message time and never moves backwards", async () => {
+    const unauthorized = await SELF.fetch(`${BASE}/api/sync-status`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ cutoffAt: "2026-11-09T17:41:42+08:00" }),
+    });
+    expect(unauthorized.status).toBe(401);
+
+    const invalid = await SELF.fetch(`${BASE}/api/sync-status`, {
+      method: "POST",
+      headers: { ...AUTH, "content-type": "application/json" },
+      body: JSON.stringify({ cutoffAt: "not-a-time" }),
+    });
+    expect(invalid.status).toBe(422);
+
+    const first = await SELF.fetch(`${BASE}/api/sync-status`, {
+      method: "POST",
+      headers: { ...AUTH, "content-type": "application/json" },
+      body: JSON.stringify({ cutoffAt: "2026-11-09T17:41:42+08:00" }),
+    });
+    expect(first.status).toBe(200);
+    expect(await first.json()).toMatchObject({ ok: true, syncCutoffAt: "2026-11-09T09:41:42.000Z" });
+
+    const older = await SELF.fetch(`${BASE}/api/sync-status`, {
+      method: "POST",
+      headers: { ...AUTH, "content-type": "application/json" },
+      body: JSON.stringify({ cutoffAt: "2026-11-09T08:00:00+08:00" }),
+    });
+    expect(await older.json()).toMatchObject({ syncCutoffAt: "2026-11-09T09:41:42.000Z" });
+
+    const state = await SELF.fetch(`${BASE}/api/state`, { headers: AUTH });
+    expect(await state.json()).toMatchObject({ syncCutoffAt: "2026-11-09T09:41:42.000Z" });
   });
 });

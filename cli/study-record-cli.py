@@ -766,6 +766,11 @@ def completion_targets(args, state: dict) -> list[str]:
     raise CliError(EXIT_USAGE, "要给一个 record_id，或者用 --find / --all")
 
 
+def cmd_sync_status(args, base: str, api: Api) -> None:
+    result = api.request("POST", "/api/sync-status", body={"cutoffAt": args.at})
+    print(json.dumps(result or {"ok": False}, ensure_ascii=False, separators=(",", ":")))
+
+
 def cmd_completion(args, base: str, api: Api, also_check: bool) -> int:
     if args.record_id and not args.find and not args.all:
         ids = [str(args.record_id)]
@@ -916,6 +921,9 @@ def build_parser() -> argparse.ArgumentParser:
     upload_file = sub.add_parser("upload-file")
     upload_file.add_argument("paths", nargs="+")
     upload_file.add_argument("--json", action="store_true")
+
+    sync_status = sub.add_parser("sync-status")
+    sync_status.add_argument("--at", required=True, help="最后一条钉钉消息的发送时间（ISO 8601）")
     upload_file.add_argument("--child")
     upload_file.add_argument("--by")
 
@@ -972,6 +980,9 @@ def main(argv=None) -> int:
             return cmd_upload_image(args, base, api)
         if args.command == "upload-file":
             return cmd_upload_file(args, base, api)
+        if args.command == "sync-status":
+            cmd_sync_status(args, base, api)
+            return EXIT_OK
         if args.command == "done":
             return cmd_completion(args, base, api, also_check=False)
         if args.command == "checked":

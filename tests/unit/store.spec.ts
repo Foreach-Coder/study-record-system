@@ -4,7 +4,7 @@ import { ensureSession, store, todayList } from "../../src/web/stores/app";
 import type { AppState } from "../../src/shared/schema";
 
 function state(overrides: Partial<AppState> = {}): AppState {
-  return { schemaVersion: 1, today: "", serverTime: "", children: [], tasks: [], behaviors: [], ...overrides };
+  return { schemaVersion: 1, today: "", serverTime: "", syncCutoffAt: null, children: [], tasks: [], behaviors: [], ...overrides };
 }
 
 describe("store bootstrap", () => {

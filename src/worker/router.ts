@@ -7,6 +7,7 @@ import { createChild, deleteChild, updateChild } from "./routes/children";
 import { getMedia, uploadFile, uploadImage } from "./routes/images";
 import { importItems } from "./routes/import";
 import { getState } from "./routes/state";
+import { updateSyncCutoff } from "./routes/sync";
 import { createTask, deleteTask, updateTask } from "./routes/tasks";
 
 export type Handler = (request: Request, env: Env, ctx: ExecutionContext, params: Record<string, string>) => Promise<Response>;
@@ -35,6 +36,7 @@ route("POST", "/api/behaviors", createBehavior);
 route("PATCH", "/api/behaviors/:id", updateBehavior);
 route("DELETE", "/api/behaviors/:id", deleteBehavior);
 route("GET", "/api/state", getState);
+route("POST", "/api/sync-status", updateSyncCutoff);
 route("POST", "/api/import", importItems);
 route("POST", "/api/images", uploadImage);
 route("POST", "/api/files", uploadFile);
