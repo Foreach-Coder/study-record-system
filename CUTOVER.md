@@ -45,7 +45,7 @@ npx cf deploy --secrets-file .dev.vars.prod.json
 
 ## CLI 与技能
 
-- CLI：`cli/xuexi.py`，配置在 `%APPDATA%\study-record\config.json`。
+- CLI：`cli/study-record-cli.py`，配置在 `%APPDATA%\study-record\config.json`。
 - 手动录入技能：`.agents/skills/study-record`。
 - 钉钉同步技能：`.agents/skills/study-record-sync`；写入调用新 CLI。
 - 旧 `xuexi-record` / `xuexi-sync` 保留不动，切换完成后可停用。

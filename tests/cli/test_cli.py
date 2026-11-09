@@ -11,7 +11,7 @@ from threading import Thread
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
-CLI = ROOT / "cli" / "xuexi.py"
+CLI = ROOT / "cli" / "study-record-cli.py"
 
 CHILD_1 = {
     "id": "c1", "nickname": "李律研", "birthday": None, "grade": "三年级",

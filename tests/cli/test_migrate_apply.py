@@ -9,7 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts" / "migrate_apply.py"
-CLI = ROOT / "cli" / "xuexi.py"
+CLI = ROOT / "cli" / "study-record-cli.py"
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 24
 

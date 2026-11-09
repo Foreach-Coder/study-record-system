@@ -874,7 +874,7 @@ def cmd_doctor(args, base: str, api: Api) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="xuexi.py")
+    parser = argparse.ArgumentParser(prog="study-record-cli.py")
     parser.add_argument("--base-url")
     parser.add_argument("--token")
     parser.add_argument("--child", dest="global_child")

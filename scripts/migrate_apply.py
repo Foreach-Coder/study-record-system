@@ -18,7 +18,7 @@ import uuid
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CLI = ROOT / "cli" / "xuexi.py"
+CLI = ROOT / "cli" / "study-record-cli.py"
 UA = {"user-agent": "study-record-migrate/0.1", "accept": "application/json"}
 DEFAULT_BASE = "https://study-record-preview.foreach.me"
 
