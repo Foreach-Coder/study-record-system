@@ -100,7 +100,7 @@ function resolveChild(
 function taskInsert(env: Env, item: Prepared): D1PreparedStatement {
   const v = item.values;
   return env.DB.prepare(
-    "INSERT INTO tasks (id, child_id, child_name, title, body, type, subject, due_date, start_date, completed, checked, images, created_by, created_at, updated_at, legacy_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    "INSERT INTO tasks (id, child_id, child_name, title, body, type, subject, due_date, start_date, completed, checked, images, attachments, created_by, created_at, updated_at, legacy_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
   ).bind(
     item.id,
     item.childId,
@@ -114,6 +114,7 @@ function taskInsert(env: Env, item: Prepared): D1PreparedStatement {
     v.completed ? 1 : 0,
     v.checked ? 1 : 0,
     JSON.stringify(v.images ?? []),
+    JSON.stringify(v.attachments ?? []),
     v.createdBy,
     v.createdAt,
     v.createdAt,
@@ -124,7 +125,7 @@ function taskInsert(env: Env, item: Prepared): D1PreparedStatement {
 function behaviorInsert(env: Env, item: Prepared): D1PreparedStatement {
   const v = item.values;
   return env.DB.prepare(
-    "INSERT INTO behaviors (id, child_id, child_name, title, body, occurred_on, dimension, tone, source, images, created_by, created_at, updated_at, legacy_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    "INSERT INTO behaviors (id, child_id, child_name, title, body, occurred_on, dimension, tone, source, images, attachments, created_by, created_at, updated_at, legacy_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
   ).bind(
     item.id,
     item.childId,
@@ -136,6 +137,7 @@ function behaviorInsert(env: Env, item: Prepared): D1PreparedStatement {
     v.tone,
     v.source,
     JSON.stringify(v.images ?? []),
+    JSON.stringify(v.attachments ?? []),
     v.createdBy,
     v.createdAt,
     v.createdAt,
@@ -162,8 +164,8 @@ type VerifyRow = Record<string, unknown>;
 async function selectRows(env: Env, table: Bucket, ids: string[]): Promise<Map<string, VerifyRow>> {
   const columns =
     table === "tasks"
-      ? "id, child_name, title, body, type, subject, due_date, start_date, completed, checked, images, created_by"
-      : "id, child_name, title, body, occurred_on, dimension, tone, source, images, created_by";
+      ? "id, child_name, title, body, type, subject, due_date, start_date, completed, checked, images, attachments, created_by"
+      : "id, child_name, title, body, occurred_on, dimension, tone, source, images, attachments, created_by";
   const rows = new Map<string, VerifyRow>();
   for (const chunk of chunks(ids)) {
     const placeholders = chunk.map(() => "?").join(",");
@@ -182,7 +184,7 @@ function sameField(actual: unknown, expected: unknown): boolean {
   return String(actual ?? "") === String(expected);
 }
 
-function sameImages(actual: unknown, expected: unknown): boolean {
+function sameJsonArray(actual: unknown, expected: unknown): boolean {
   try {
     return JSON.stringify(JSON.parse(String(actual ?? "[]"))) === JSON.stringify(expected ?? []);
   } catch {
@@ -221,8 +223,11 @@ function verifyRow(kind: Kind, row: VerifyRow | undefined, item: Prepared): void
       throw new ApiProblem(500, "verification_failed", "导入后字段不符", undefined, { id: item.id, column });
     }
   }
-  if (!sameImages(row.images, v.images ?? [])) {
+  if (!sameJsonArray(row.images, v.images ?? [])) {
     throw new ApiProblem(500, "verification_failed", "导入后图片不符", undefined, { id: item.id, column: "images" });
+  }
+  if (!sameJsonArray(row.attachments, v.attachments ?? [])) {
+    throw new ApiProblem(500, "verification_failed", "导入后附件不符", undefined, { id: item.id, column: "attachments" });
   }
 }
 

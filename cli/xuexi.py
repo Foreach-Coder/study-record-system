@@ -157,6 +157,20 @@ def image_block(base: str, item: dict) -> dict:
     return {"image": {"images": images}}
 
 
+def attachment_block(base: str, item: dict) -> list[dict]:
+    result = []
+    for attachment in item.get("attachments") or []:
+        if not isinstance(attachment, dict) or not attachment.get("url"):
+            continue
+        result.append({
+            "name": attachment.get("name") or "附件",
+            "url": absolute_media(base, str(attachment["url"])),
+            "size": int(attachment.get("size") or 0),
+            "type": attachment.get("type") or "application/octet-stream",
+        })
+    return result
+
+
 def task_json(base: str, task: dict) -> dict:
     return {
         "record_id": task["id"],
@@ -170,6 +184,7 @@ def task_json(base: str, task: dict) -> dict:
         "已完成": bool(task.get("completed")),
         "已检查": bool(task.get("checked")),
         "图片": image_block(base, task),
+        "附件": attachment_block(base, task),
         "录入人": task.get("createdBy"),
     }
 
@@ -185,6 +200,7 @@ def behavior_json(base: str, item: dict) -> dict:
         "来源": item.get("source"),
         "孩子": item.get("childName"),
         "图片": image_block(base, item),
+        "附件": attachment_block(base, item),
         "录入人": item.get("createdBy"),
     }
 
@@ -269,6 +285,30 @@ def images_from(data: dict, base: str) -> list[dict]:
     return result
 
 
+def attachments_from(data: dict, base: str) -> list[dict]:
+    raw = data.get("附件", data.get("attachments"))
+    if not isinstance(raw, list):
+        return []
+    result = []
+    for entry in raw:
+        if not isinstance(entry, dict):
+            continue
+        url = entry.get("url")
+        if not url:
+            continue
+        try:
+            size = int(entry.get("size") or entry.get("bytes") or 0)
+        except (TypeError, ValueError):
+            size = 0
+        result.append({
+            "name": str(entry.get("name") or entry.get("title") or "附件"),
+            "url": relative_media(base, str(url)),
+            "size": max(0, size),
+            "type": str(entry.get("type") or "application/octet-stream"),
+        })
+    return result
+
+
 def pick(data: dict, *keys):
     for key in keys:
         value = data.get(key)
@@ -283,6 +323,7 @@ def normalize_item(kind: str, data: dict, payload: dict, base: str, hint: str | 
     title = pick(data, "标题", "title")
     body = pick(data, "正文", "body") or ""
     images = images_from(data, base)
+    attachments = attachments_from(data, base)
     if kind == "task":
         raw_type = str(pick(data, "类型", "type") or hint or "作业")
         task_type = TASK_TYPES.get(raw_type, "homework")
@@ -296,6 +337,7 @@ def normalize_item(kind: str, data: dict, payload: dict, base: str, hint: str | 
             "completed": bool(data.get("已完成", data.get("completed", False))),
             "checked": bool(data.get("已检查", data.get("checked", False))),
             "images": images,
+            "attachments": attachments,
         }
         subject = pick(data, "科目", "subject")
         if subject is not None:
@@ -310,6 +352,7 @@ def normalize_item(kind: str, data: dict, payload: dict, base: str, hint: str | 
             "body": body,
             "occurredOn": pick(data, "日期", "occurredOn", "date") or pick(payload, "date", "日期"),
             "images": images,
+            "attachments": attachments,
         }
         for source, target in (("维度", "dimension"), ("dimension", "dimension"),
                                ("档位", "tone"), ("tone", "tone"),
@@ -369,6 +412,15 @@ def media_type(path: Path) -> str:
         ".jpeg": "image/jpeg",
         ".webp": "image/webp",
         ".gif": "image/gif",
+        ".pdf": "application/pdf",
+        ".doc": "application/msword",
+        ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ".xls": "application/vnd.ms-excel",
+        ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ".ppt": "application/vnd.ms-powerpoint",
+        ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        ".txt": "text/plain",
+        ".zip": "application/zip",
     }.get(path.suffix.lower(), "application/octet-stream")
 
 
@@ -529,6 +581,8 @@ REVISE_FIELDS = (
     ("start", "startDate"),
     ("startDate", "startDate"),
     ("开始日", "startDate"),
+    ("附件", "attachments"),
+    ("attachments", "attachments"),
 )
 
 
@@ -553,8 +607,10 @@ def cmd_revise(args, base: str, api: Api) -> int:
             value = item.get(source)
             if value is not None:
                 body[target] = value
+        if "attachments" in body:
+            body["attachments"] = attachments_from(item, base)
         if table == "behavior":
-            body = {key: value for key, value in body.items() if key in ("title", "body")}
+            body = {key: value for key, value in body.items() if key in ("title", "body", "attachments")}
         record_id = str(item["record_id"])
         try:
             api.request(
@@ -630,6 +686,49 @@ def cmd_upload_image(args, base: str, api: Api) -> int:
         print(json.dumps(payload, ensure_ascii=False))
     else:
         print(f"上传 {len(images)} 张，失败 {len(errors)} 张")
+    return EXIT_OK if not errors else EXIT_WRITE
+
+
+def cmd_upload_file(args, base: str, api: Api) -> int:
+    files = []
+    errors = []
+    for raw_path in args.paths:
+        path = Path(raw_path)
+        try:
+            data = path.read_bytes()
+        except OSError as exc:
+            errors.append({"file": path.name, "path": raw_path, "error": str(exc)})
+            continue
+        body, content_type = multipart_body({}, "file", path.name, data, media_type(path))
+        try:
+            response = api.request(
+                "POST",
+                "/api/files",
+                body=body,
+                headers={"content-type": content_type},
+            ) or {}
+        except CliError as exc:
+            if exc.code == EXIT_ENV:
+                raise
+            errors.append({"file": path.name, "path": raw_path, "error": exc.message})
+            continue
+        url = str(response.get("url") or "")
+        files.append(
+            {
+                "file": path.name,
+                "path": raw_path,
+                "url": absolute_media(base, url),
+                "name": response.get("name") or path.name,
+                "size": int(response.get("size") or len(data)),
+                "type": response.get("type") or media_type(path),
+                "cached": False,
+            }
+        )
+    payload = {"ok": not errors, "files": files, "errors": errors}
+    if args.json:
+        print(json.dumps(payload, ensure_ascii=False))
+    else:
+        print(f"上传 {len(files)} 个文件，失败 {len(errors)} 个")
     return EXIT_OK if not errors else EXIT_WRITE
 
 
@@ -814,6 +913,12 @@ def build_parser() -> argparse.ArgumentParser:
     upload.add_argument("--child")
     upload.add_argument("--by")
 
+    upload_file = sub.add_parser("upload-file")
+    upload_file.add_argument("paths", nargs="+")
+    upload_file.add_argument("--json", action="store_true")
+    upload_file.add_argument("--child")
+    upload_file.add_argument("--by")
+
     for name in ("done", "checked"):
         command = sub.add_parser(name)
         command.add_argument("record_id", nargs="?", default=None)
@@ -865,6 +970,8 @@ def main(argv=None) -> int:
             return cmd_revise(args, base, api)
         if args.command == "upload-image":
             return cmd_upload_image(args, base, api)
+        if args.command == "upload-file":
+            return cmd_upload_file(args, base, api)
         if args.command == "done":
             return cmd_completion(args, base, api, also_check=False)
         if args.command == "checked":

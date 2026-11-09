@@ -50,6 +50,16 @@ describe("import", () => {
     expect(await countTasks("导入任务")).toBe(1);
   });
 
+  it("persists attachments through import", async () => {
+    const attachment = { name: "附件.pdf", url: "/media/files/abc.pdf", size: 123, type: "pdf" };
+    const applied = await post(payload([taskItem({ title: "附件任务", attachments: [attachment] })]));
+    expect(applied.response.status).toBe(200);
+    const row = await env.DB.prepare("SELECT attachments FROM tasks WHERE title = ?")
+      .bind("附件任务")
+      .first<{ attachments: string }>();
+    expect(JSON.parse(row?.attachments ?? "[]")).toEqual([attachment]);
+  });
+
   it("returns 409 for a duplicate and skips it when requested", async () => {
     expect((await post(payload([taskItem()]))).response.status).toBe(409);
     const skipped = await post({ ...payload([taskItem()]), onDuplicate: "skip" });
