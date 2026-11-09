@@ -14,6 +14,7 @@ const FILE_TYPES: Record<string, string> = {
   ppt: "application/vnd.ms-powerpoint",
   pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   txt: "text/plain",
+  mp3: "audio/mpeg",
   zip: "application/zip",
 };
 const CACHE = "private, max-age=31536000, immutable";
@@ -57,7 +58,7 @@ export async function uploadFile(request: Request, env: Env): Promise<Response> 
   if (!(file instanceof File)) throw new ApiProblem(422, "validation", "缺少 file", { file: "必填" });
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
   const contentType = FILE_TYPES[ext];
-  if (!contentType) throw new ApiProblem(415, "unsupported_type", "只支持 pdf/doc/docx/xls/xlsx/ppt/pptx/txt/zip");
+  if (!contentType) throw new ApiProblem(415, "unsupported_type", "只支持 pdf/doc/docx/xls/xlsx/ppt/pptx/txt/mp3/zip");
   if (file.size > MAX_FILE_BYTES) throw new ApiProblem(413, "too_large", "附件不能超过 20 MiB");
   const bytes = new Uint8Array(await file.arrayBuffer());
   const key = `files/${await sha256Hex(bytes)}.${ext}`;

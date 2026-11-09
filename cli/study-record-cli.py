@@ -420,6 +420,7 @@ def media_type(path: Path) -> str:
         ".ppt": "application/vnd.ms-powerpoint",
         ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
         ".txt": "text/plain",
+        ".mp3": "audio/mpeg",
         ".zip": "application/zip",
     }.get(path.suffix.lower(), "application/octet-stream")
 
