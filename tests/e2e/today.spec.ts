@@ -27,3 +27,21 @@ test("today shows progress and grouped tasks", async ({ page }) => {
   await page.getByRole("button", { name: /数学口算/ }).click();
   await expect(page).toHaveURL((url) => url.pathname.startsWith("/tasks/"));
 });
+
+test("keeps a task that starts today even when its due date is later", async ({ page }) => {
+  const nickname = `小提前${Date.now()}`;
+  const today = shanghaiToday();
+  const due = new Date(`${today}T00:00:00Z`);
+  due.setUTCDate(due.getUTCDate() + 3);
+
+  await login(page);
+  await seedChild(page, nickname);
+  await page.reload();
+  await page.getByLabel("孩子").selectOption({ label: nickname });
+  await seedImport(page, [
+    { kind: "task", data: { child: nickname, title: "下周手抄报", body: "", type: "todo", dueDate: due.toISOString().slice(0, 10), startDate: today } },
+  ]);
+  await page.reload();
+
+  await expect(page.getByRole("button", { name: /下周手抄报/ })).toBeVisible();
+});

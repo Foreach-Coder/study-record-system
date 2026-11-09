@@ -19,12 +19,22 @@ describe("todayTasks", () => {
       task({ id: "overdue", dueDate: "2026-11-06" }),
       task({ id: "today", dueDate: "2026-11-07" }),
       task({ id: "horizon", dueDate: "2026-11-09" }),
-      task({ id: "future", dueDate: "2026-11-10" }),
+      task({ id: "future", dueDate: "2026-11-10", startDate: "2026-11-10" }),
       task({ id: "done", dueDate: "2026-11-07", completed: true }),
       task({ id: "starts-later", dueDate: "2026-11-08", startDate: "2026-11-09" }),
     ];
     expect(todayTasks(tasks, "2026-11-07", "2026-11-09").map((t) => t.id))
       .toEqual(["overdue", "today", "horizon"]);
+  });
+
+  it("keeps started tasks even when their due date is beyond the horizon", () => {
+    const tasks = [
+      task({ id: "started", dueDate: "2026-11-20", startDate: "2026-11-07" }),
+      task({ id: "not-started", dueDate: "2026-11-20", startDate: "2026-11-10" }),
+      task({ id: "no-start", dueDate: "2026-11-20", startDate: null }),
+    ];
+    expect(todayTasks(tasks, "2026-11-07", "2026-11-07").map((t) => t.id))
+      .toEqual(["started"]);
   });
 });
 

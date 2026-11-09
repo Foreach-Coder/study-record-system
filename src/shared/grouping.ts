@@ -9,10 +9,13 @@ function groupKey(task: Task): string {
   return task.startDate ?? task.dueDate ?? "unscheduled";
 }
 
-export function todayTasks(tasks: Task[], today: string, horizon: string): Task[] {
+export function todayTasks(tasks: Task[], today: string, horizon: string, includeCompleted = false): Task[] {
   return tasks.filter((task) => {
-    if (task.completed) return false;
+    if (!includeCompleted && task.completed) return false;
     if (task.dueDate < today) return true;
+    // 已开始的任务一直留在今天页，即使截止日还在视野之外；
+    // 这样“今天开始、下周截止”的作业/待办不会消失。
+    if (task.startDate && task.startDate <= today) return true;
     if (task.dueDate > horizon) return false;
     return !task.startDate || task.startDate <= today;
   });

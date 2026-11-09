@@ -2,7 +2,8 @@
 import { computed } from "vue";
 import { useRouter } from "vue-router";
 import type { Task } from "../../shared/schema";
-import { groupTasks } from "../../shared/grouping";
+import { groupTasks, todayTasks } from "../../shared/grouping";
+import { computeHorizon } from "../../shared/horizon";
 import { progress } from "../../shared/labels";
 import { api, ApiError } from "../api";
 import ProgressCard from "../components/ProgressCard.vue";
@@ -14,7 +15,10 @@ const router = useRouter();
 const today = computed(() => store.state?.today ?? "");
 const tasks = computed(() => todayList());
 const groups = computed(() => groupTasks(tasks.value));
-const stats = computed(() => today.value ? progress(visibleTasks(), today.value) : { total: 0, done: 0, percent: 0 });
+const stats = computed(() => {
+  if (!today.value) return { total: 0, done: 0, percent: 0 };
+  return progress(todayTasks(visibleTasks(), today.value, computeHorizon(today.value), true), today.value);
+});
 const recent = computed(() => visibleBehaviors().slice(0, 3));
 
 function fail(error: unknown) {
