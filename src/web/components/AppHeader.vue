@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useRouter } from "vue-router";
+import { todayInShanghai } from "../../shared/dates";
+import { relativeDateTime } from "../../shared/relative";
 import { api } from "../api";
 import { refresh, store } from "../stores/app";
 import ChildSwitcher from "./ChildSwitcher.vue";
@@ -13,15 +15,7 @@ const syncLabel = computed(() => {
   if (!value) return "尚未同步";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "尚未同步";
-  const text = new Intl.DateTimeFormat("zh-CN", {
-    timeZone: "Asia/Shanghai",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(date);
-  return text;
+  return relativeDateTime(value, store.state?.today ?? todayInShanghai());
 });
 
 async function reload() {

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { Behavior } from "../../shared/schema";
+import { relativeDay } from "../../shared/relative";
 
-const props = defineProps<{ behavior: Behavior }>();
+const props = defineProps<{ behavior: Behavior; today: string }>();
 defineEmits<{ open: [behavior: Behavior] }>();
 
 const toneClass = computed(() => {
@@ -14,7 +15,7 @@ const toneClass = computed(() => {
 
 <template>
   <button type="button" class="behavior-card" @click="$emit('open', behavior)">
-    <span class="date">{{ behavior.occurredOn.slice(5) }}</span>
+    <span class="date">{{ relativeDay(behavior.occurredOn, today) }}</span>
     <span class="content">
       <strong>{{ behavior.title }}</strong>
       <span class="tags">
@@ -55,7 +56,7 @@ const toneClass = computed(() => {
 
 .date {
   flex: none;
-  width: 42px;
+  width: 56px;
   color: var(--muted);
   font-family: var(--font-numeric);
   font-size: 11px;

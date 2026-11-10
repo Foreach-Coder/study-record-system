@@ -1,6 +1,7 @@
 import type { Task } from "./schema";
 import type { TaskGroup } from "./grouping";
 import { computeHorizon } from "./horizon";
+import { relativeDay } from "./relative";
 
 export type TaskLabelTone = "overdue" | "today" | "neutral";
 
@@ -11,17 +12,17 @@ export interface TaskLabel {
 
 export function taskLabel(task: Task, today: string): TaskLabel | null {
   if (!task.startDate) return null;
+  const due = relativeDay(task.dueDate, today);
   if (!task.completed && task.dueDate < today) {
-    return { text: `${task.dueDate.slice(5)} 截止`, tone: "overdue" };
+    return { text: `${due}截止`, tone: "overdue" };
   }
-  if (task.dueDate === today) return { text: "今天截止", tone: "today" };
-  return { text: `${task.dueDate.slice(5)} 截止`, tone: "neutral" };
+  if (task.dueDate === today) return { text: `${due}截止`, tone: "today" };
+  return { text: `${due}截止`, tone: "neutral" };
 }
 
 export function groupHeader(group: TaskGroup, today: string): string {
   const allDone = group.tasks.length > 0 && group.tasks.every((task) => task.completed);
-  const date =
-    group.key === "unscheduled" ? "未安排开始日" : group.key === today ? "今天" : group.key.slice(5);
+  const date = group.key === "unscheduled" ? "未安排开始日" : relativeDay(group.key, today);
   return allDone ? `${date} · 已全部完成` : date;
 }
 

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { todayInShanghai } from "../../shared/dates";
+import { relativeDay } from "../../shared/relative";
 import MarkdownView from "../components/MarkdownView.vue";
 import EntrySheet from "../components/EntrySheet.vue";
 import { store } from "../stores/app";
@@ -8,6 +10,7 @@ import { store } from "../stores/app";
 const route = useRoute();
 const router = useRouter();
 const item = computed(() => (store.state?.behaviors ?? []).find((row) => row.id === route.params.id));
+const today = computed(() => store.state?.today ?? todayInShanghai());
 const entry = ref<InstanceType<typeof EntrySheet> | null>(null);
 
 function formatBytes(size: number): string {
@@ -37,7 +40,7 @@ function toneClass(tone: string | null): string {
 
     <section class="hero">
       <div class="chips">
-        <span class="chip">{{ item.occurredOn }}</span>
+        <span class="chip">{{ relativeDay(item.occurredOn, today) }}</span>
         <span v-if="item.dimension" class="chip">{{ item.dimension }}</span>
         <span v-if="item.tone" class="chip" :class="toneClass(item.tone)">{{ item.tone }}</span>
         <span v-if="item.childId === null" class="chip danger">孤儿</span>

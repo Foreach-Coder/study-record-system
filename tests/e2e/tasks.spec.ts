@@ -42,8 +42,8 @@ test("lists tasks, filters, and opens a detail", async ({ page }) => {
   await expect(page).toHaveURL(/\/tasks\/.+/);
   await expect(page.getByRole("heading", { name: "数学口算" })).toBeVisible();
   await expect(page.getByText("数学", { exact: true })).toBeVisible();
-  await expect(page.getByText(`${today} 开始`)).toBeVisible();
-  await expect(page.getByText(`${today} 截止`)).toBeVisible();
+  await expect(page.getByText("今天开始")).toBeVisible();
+  await expect(page.getByText("今天截止")).toBeVisible();
   await expect(page.getByRole("heading", { name: "要求" })).toBeVisible();
 
   await page.locator('summary[aria-label="更多操作"]').click();

@@ -4,9 +4,10 @@ import { useRouter } from "vue-router";
 import { addDays, todayInShanghai } from "../../shared/dates";
 import BehaviorCard from "../components/BehaviorCard.vue";
 import EmptyState from "../components/EmptyState.vue";
-import { visibleBehaviors } from "../stores/app";
+import { store, visibleBehaviors } from "../stores/app";
 
 const router = useRouter();
+const today = computed(() => store.state?.today ?? todayInShanghai());
 const days = ref(30);
 const ranges: { value: number; label: string }[] = [
   { value: 7, label: "7 天" },
@@ -14,7 +15,7 @@ const ranges: { value: number; label: string }[] = [
   { value: 90, label: "90 天" },
 ];
 const list = computed(() => {
-  const cutoff = addDays(todayInShanghai(), -(days.value - 1));
+  const cutoff = addDays(today.value, -(days.value - 1));
   return [...visibleBehaviors()]
     .filter((item) => item.occurredOn >= cutoff)
     .sort((a, b) => b.occurredOn.localeCompare(a.occurredOn) || b.createdAt.localeCompare(a.createdAt));
@@ -59,7 +60,13 @@ const stats = computed(() => ({
 
     <EmptyState v-if="list.length === 0" title="这段时间还没有记录" message="点右下角“记录”添加一条。" />
     <div v-else class="list">
-      <BehaviorCard v-for="item in list" :key="item.id" :behavior="item" @open="router.push(`/behaviors/${item.id}`)" />
+      <BehaviorCard
+        v-for="item in list"
+        :key="item.id"
+        :behavior="item"
+        :today="today"
+        @open="router.push(`/behaviors/${item.id}`)"
+      />
     </div>
   </div>
 </template>

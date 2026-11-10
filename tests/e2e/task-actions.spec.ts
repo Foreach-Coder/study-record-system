@@ -46,5 +46,5 @@ test("delays an overdue task to today", async ({ page }) => {
   await expect(delay).toBeVisible();
   await delay.click();
   await expect(delay).toHaveCount(0);
-  await expect(page.getByText(`${today} 截止`)).toBeVisible();
+  await expect(page.getByText("今天截止")).toBeVisible();
 });

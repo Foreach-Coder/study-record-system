@@ -2,6 +2,7 @@
 import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { todayInShanghai } from "../../shared/dates";
+import { relativeDay } from "../../shared/relative";
 import { api, ApiError } from "../api";
 import MarkdownView from "../components/MarkdownView.vue";
 import EntrySheet from "../components/EntrySheet.vue";
@@ -14,8 +15,8 @@ const pending = ref(false);
 const error = ref("");
 const confirming = ref(false);
 const entry = ref<InstanceType<typeof EntrySheet> | null>(null);
-const today = todayInShanghai();
-const canDelay = computed(() => !!task.value && !task.value.completed && task.value.dueDate < today);
+const today = computed(() => store.state?.today ?? todayInShanghai());
+const canDelay = computed(() => !!task.value && !task.value.completed && task.value.dueDate < today.value);
 
 function formatBytes(size: number): string {
   if (size < 1024) return `${size} B`;
@@ -42,7 +43,7 @@ async function update(patch: Record<string, unknown>) {
 }
 
 async function delayToToday() {
-  await update({ dueDate: today, startDate: today });
+  await update({ dueDate: today.value, startDate: today.value });
 }
 
 async function removeConfirmed() {
@@ -116,8 +117,8 @@ async function removeConfirmed() {
       </div>
       <h1>{{ task.title }}</h1>
       <p class="dates">
-        <span v-if="task.startDate">{{ task.startDate }} 开始</span>
-        <span>{{ task.dueDate }} 截止</span>
+        <span v-if="task.startDate">{{ relativeDay(task.startDate, today) }}开始</span>
+        <span>{{ relativeDay(task.dueDate, today) }}截止</span>
         <span v-if="task.checked" class="ok">已检查</span>
       </p>
     </section>

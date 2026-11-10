@@ -4,6 +4,7 @@ import { useRouter } from "vue-router";
 import type { Task } from "../../shared/schema";
 import { groupTasks, todayTasks } from "../../shared/grouping";
 import { computeHorizon } from "../../shared/horizon";
+import { relativeDay } from "../../shared/relative";
 import { api, ApiError } from "../api";
 import ProgressCard from "../components/ProgressCard.vue";
 import EmptyState from "../components/EmptyState.vue";
@@ -66,7 +67,7 @@ async function toggle(task: Task) {
         <article v-for="item in recent" :key="item.id">
           <span class="dot" aria-hidden="true" />
           <strong>{{ item.title }}</strong>
-          <span class="date">{{ item.occurredOn.slice(5) }}</span>
+          <span class="date">{{ relativeDay(item.occurredOn, today) }}</span>
         </article>
       </div>
     </section>
