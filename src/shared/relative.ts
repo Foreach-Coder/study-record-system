@@ -22,11 +22,14 @@ export function relativeDay(value: string, today: string): string {
   return diff < 0 ? `${-diff} 天前` : `${diff} 天后`;
 }
 
-export function relativeDateTime(value: string, today: string): string {
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return relativeDay(value, today);
+export function relativeDayWithDate(value: string, today: string): string {
+  return `${relativeDay(value, today)} · ${value.slice(5)}`;
+}
+
+export function shanghaiDay(value: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: SHANGHAI,
     year: "numeric",
@@ -34,12 +37,18 @@ export function relativeDateTime(value: string, today: string): string {
     day: "2-digit",
   }).formatToParts(date);
   const get = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
-  const day = `${get("year")}-${get("month")}-${get("day")}`;
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+export function relativeDateTime(value: string, today: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return relativeDay(value, today);
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
   const time = new Intl.DateTimeFormat("zh-CN", {
     timeZone: SHANGHAI,
     hour: "2-digit",
     minute: "2-digit",
     hourCycle: "h23",
   }).format(date);
-  return `${relativeDay(day, today)} ${time}`;
+  return `${relativeDay(shanghaiDay(value), today)} ${time}`;
 }

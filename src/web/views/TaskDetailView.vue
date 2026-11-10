@@ -117,8 +117,8 @@ async function removeConfirmed() {
       </div>
       <h1>{{ task.title }}</h1>
       <p class="dates">
-        <span v-if="task.startDate">{{ relativeDay(task.startDate, today) }}开始</span>
-        <span>{{ relativeDay(task.dueDate, today) }}截止</span>
+        <span v-if="task.startDate">{{ relativeDay(task.startDate, today) }}开始 · {{ task.startDate.slice(5) }}</span>
+        <span>{{ relativeDay(task.dueDate, today) }}截止 · {{ task.dueDate.slice(5) }}</span>
         <span v-if="task.checked" class="ok">已检查</span>
       </p>
     </section>

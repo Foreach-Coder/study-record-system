@@ -67,7 +67,7 @@ async function toggle(task: Task) {
         <article v-for="item in recent" :key="item.id">
           <span class="dot" aria-hidden="true" />
           <strong>{{ item.title }}</strong>
-          <span class="date">{{ relativeDay(item.occurredOn, today) }}</span>
+          <span class="date">{{ relativeDay(item.occurredOn, today) }} · {{ item.occurredOn.slice(5) }}</span>
         </article>
       </div>
     </section>

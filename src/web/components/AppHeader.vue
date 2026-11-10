@@ -2,7 +2,7 @@
 import { computed } from "vue";
 import { useRouter } from "vue-router";
 import { todayInShanghai } from "../../shared/dates";
-import { relativeDateTime } from "../../shared/relative";
+import { relativeDateTime, shanghaiDay } from "../../shared/relative";
 import { api } from "../api";
 import { refresh, store } from "../stores/app";
 import ChildSwitcher from "./ChildSwitcher.vue";
@@ -15,7 +15,7 @@ const syncLabel = computed(() => {
   if (!value) return "尚未同步";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "尚未同步";
-  return relativeDateTime(value, store.state?.today ?? todayInShanghai());
+  return `${relativeDateTime(value, store.state?.today ?? todayInShanghai())} · ${shanghaiDay(value).slice(5)}`;
 });
 
 async function reload() {

@@ -62,10 +62,10 @@ describe("groupTasks", () => {
 
 describe("labels and progress", () => {
   it("labels due dates and completion", () => {
-    expect(taskLabel(task({ dueDate: "2026-11-07" }), "2026-11-07")).toEqual({ text: "今天截止", tone: "today" });
-    expect(taskLabel(task({ dueDate: "2026-11-06" }), "2026-11-07")).toEqual({ text: "昨天截止", tone: "overdue" });
-    expect(taskLabel(task({ dueDate: "2026-11-09" }), "2026-11-07")).toEqual({ text: "后天截止", tone: "neutral" });
-    expect(groupHeader({ key: "2026-11-07", tasks: [task({ completed: true })] }, "2026-11-07")).toBe("今天 · 已全部完成");
+    expect(taskLabel(task({ dueDate: "2026-11-07" }), "2026-11-07")).toEqual({ text: "今天截止 · 11-07", tone: "today" });
+    expect(taskLabel(task({ dueDate: "2026-11-06" }), "2026-11-07")).toEqual({ text: "昨天截止 · 11-06", tone: "overdue" });
+    expect(taskLabel(task({ dueDate: "2026-11-09" }), "2026-11-07")).toEqual({ text: "后天截止 · 11-09", tone: "neutral" });
+    expect(groupHeader({ key: "2026-11-07", tasks: [task({ completed: true })] }, "2026-11-07")).toBe("今天 · 11-07 · 已全部完成");
     expect(progress([task({ completed: true }), task({ id: "t2" })], "2026-11-07")).toEqual({ total: 2, done: 1, percent: 50 });
   });
 });

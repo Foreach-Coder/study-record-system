@@ -40,7 +40,7 @@ function toneClass(tone: string | null): string {
 
     <section class="hero">
       <div class="chips">
-        <span class="chip">{{ relativeDay(item.occurredOn, today) }}</span>
+        <span class="chip">{{ relativeDay(item.occurredOn, today) }} · {{ item.occurredOn.slice(5) }}</span>
         <span v-if="item.dimension" class="chip">{{ item.dimension }}</span>
         <span v-if="item.tone" class="chip" :class="toneClass(item.tone)">{{ item.tone }}</span>
         <span v-if="item.childId === null" class="chip danger">孤儿</span>

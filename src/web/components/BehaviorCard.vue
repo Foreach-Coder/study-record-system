@@ -15,7 +15,10 @@ const toneClass = computed(() => {
 
 <template>
   <button type="button" class="behavior-card" @click="$emit('open', behavior)">
-    <span class="date">{{ relativeDay(behavior.occurredOn, today) }}</span>
+    <span class="date">
+      <span>{{ relativeDay(behavior.occurredOn, today) }}</span>
+      <small>{{ behavior.occurredOn.slice(5) }}</small>
+    </span>
     <span class="content">
       <strong>{{ behavior.title }}</strong>
       <span class="tags">
@@ -55,12 +58,20 @@ const toneClass = computed(() => {
 }
 
 .date {
+  display: flex;
   flex: none;
   width: 56px;
+  flex-direction: column;
   color: var(--muted);
   font-family: var(--font-numeric);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+}
+
+.date small {
+  color: var(--line-strong);
+  font-size: 10px;
 }
 
 .content {
