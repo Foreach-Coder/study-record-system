@@ -2,7 +2,7 @@
 import { computed } from "vue";
 import { useRouter } from "vue-router";
 import { api } from "../api";
-import { store } from "../stores/app";
+import { refresh, store } from "../stores/app";
 import ChildSwitcher from "./ChildSwitcher.vue";
 
 defineProps<{ title: string }>();
@@ -23,6 +23,14 @@ const syncLabel = computed(() => {
   }).format(date);
   return text;
 });
+
+async function reload() {
+  try {
+    await refresh();
+  } catch {
+    /* refresh 已把错误写入 store.error，由 App 的错误横幅展示 */
+  }
+}
 
 async function logout() {
   try {
@@ -48,6 +56,38 @@ async function logout() {
     </div>
     <div class="actions">
       <ChildSwitcher />
+      <button
+        type="button"
+        class="icon-btn refresh"
+        aria-label="刷新"
+        title="刷新"
+        :disabled="store.loading"
+        @click="reload"
+      >
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          width="21"
+          height="21"
+          :class="{ spinning: store.loading }"
+        >
+          <path
+            d="M20 11a8 8 0 1 0-2.34 5.66"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-width="1.8"
+          />
+          <path
+            d="M20 5v6h-6"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.8"
+          />
+        </svg>
+      </button>
       <details class="menu">
         <summary class="icon-btn" aria-label="更多">
           <svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22">
@@ -120,6 +160,27 @@ h1 {
   flex: none;
   align-items: center;
   gap: var(--space-1);
+}
+
+.refresh:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.spinning {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinning {
+    animation-duration: 2s;
+  }
 }
 
 .menu {
