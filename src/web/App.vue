@@ -5,6 +5,7 @@ import AppHeader from "./components/AppHeader.vue";
 import BottomTabs from "./components/BottomTabs.vue";
 import EntrySheet from "./components/EntrySheet.vue";
 import ErrorState from "./components/ErrorState.vue";
+import NetworkIndicator from "./components/NetworkIndicator.vue";
 import { refresh, store } from "./stores/app";
 
 const route = useRoute();
@@ -30,6 +31,7 @@ function retry() {
 </script>
 
 <template>
+  <NetworkIndicator />
   <RouterView v-if="route.path === '/login'" />
   <div v-else class="app-shell">
     <BottomTabs />

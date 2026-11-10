@@ -1,4 +1,5 @@
 import type { AppState, Behavior, Child, Task } from "../shared/schema";
+import { beginRequest, endRequest } from "./network";
 
 export class ApiError extends Error {
   constructor(
@@ -13,16 +14,21 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const headers = new Headers(init.headers);
-  if (init.body && !(init.body instanceof FormData)) headers.set("content-type", "application/json");
-  const response = await fetch(path, { ...init, headers, credentials: "same-origin" });
-  if (response.status === 204) return undefined as T;
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const error = (data as { error?: { code?: string; message?: string; fields?: Record<string, string> } })?.error ?? {};
-    throw new ApiError(response.status, error.code ?? "error", error.message ?? "请求失败", error.fields);
+  beginRequest();
+  try {
+    const headers = new Headers(init.headers);
+    if (init.body && !(init.body instanceof FormData)) headers.set("content-type", "application/json");
+    const response = await fetch(path, { ...init, headers, credentials: "same-origin" });
+    if (response.status === 204) return undefined as T;
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const error = (data as { error?: { code?: string; message?: string; fields?: Record<string, string> } })?.error ?? {};
+      throw new ApiError(response.status, error.code ?? "error", error.message ?? "请求失败", error.fields);
+    }
+    return data as T;
+  } finally {
+    endRequest();
   }
-  return data as T;
 }
 
 export interface ImageResult {
