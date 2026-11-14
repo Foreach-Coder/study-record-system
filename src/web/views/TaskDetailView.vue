@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { checklistProgress, convertBulletsToChecklist, convertibleBullets } from "../../shared/checklist";
 import { todayInShanghai } from "../../shared/dates";
 import { relativeDay } from "../../shared/relative";
 import { api, ApiError } from "../api";
 import MarkdownView from "../components/MarkdownView.vue";
 import EntrySheet from "../components/EntrySheet.vue";
 import { refresh, store } from "../stores/app";
+import type { Task } from "../../shared/schema";
 
 const route = useRoute();
 const router = useRouter();
@@ -17,6 +19,22 @@ const confirming = ref(false);
 const entry = ref<InstanceType<typeof EntrySheet> | null>(null);
 const today = computed(() => store.state?.today ?? todayInShanghai());
 const canDelay = computed(() => !!task.value && !task.value.completed && task.value.dueDate < today.value);
+const draftBody = ref<string | null>(null);
+const shownBody = computed(() => draftBody.value ?? task.value?.body ?? "");
+const saveState = ref<"idle" | "editing" | "saving" | "saved" | "error">("idle");
+const savedAt = ref("");
+watch(
+  () => task.value?.id,
+  () => {
+    draftBody.value = null;
+    saveState.value = "idle";
+    savedAt.value = "";
+  },
+);
+const progress = computed(() => checklistProgress(shownBody.value));
+const canConvert = computed(
+  () => !!task.value && progress.value.total === 0 && convertibleBullets(shownBody.value) > 0,
+);
 
 function formatBytes(size: number): string {
   if (size < 1024) return `${size} B`;
@@ -45,6 +63,121 @@ async function update(patch: Record<string, unknown>) {
 async function delayToToday() {
   await update({ dueDate: today.value, startDate: today.value });
 }
+
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+let saving = false;
+let saveSeq = 0;
+let saveQueued = false;
+const AUTO_SAVE_MS = 2000;
+
+function stampSaved() {
+  savedAt.value = new Date().toLocaleTimeString("zh-CN", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
+// 只把这一条任务合并回 store，不整页 refresh：整页替换会让界面用服务端旧正文
+// 渲染一帧，保存期间新勾的内容就会被顶一下再跳回来。
+function mergeTask(updated: Task) {
+  const state = store.state;
+  if (!state) return;
+  const index = state.tasks.findIndex((item) => item.id === updated.id);
+  if (index >= 0) state.tasks[index] = updated;
+}
+
+async function flushBody() {
+  if (!task.value || draftBody.value === null) return;
+  if (saving) {
+    saveQueued = true;
+    return;
+  }
+  const target = draftBody.value;
+  const taskId = task.value.id;
+  const seq = ++saveSeq;
+  saving = true;
+  saveState.value = "saving";
+  error.value = "";
+  try {
+    const updated = await api.updateTask(taskId, { body: target });
+    if (seq !== saveSeq) return; // 更晚的保存已经发出，这次结果作废
+    mergeTask(updated);
+    if (draftBody.value === target) {
+      draftBody.value = null;
+      saveState.value = "saved";
+      stampSaved();
+    } else {
+      // 保存期间又勾了：保持“正在编辑”，紧接着再传一次，不等 2 秒
+      saveState.value = "editing";
+      saveQueued = true;
+    }
+  } catch (reason) {
+    if (seq === saveSeq) {
+      saveState.value = "error";
+      fail(reason);
+      saveQueued = true;
+    }
+  } finally {
+    saving = false;
+    if (saveQueued) {
+      saveQueued = false;
+      queueBodySave(0);
+    }
+  }
+}
+
+const saveLabel = computed(() => {
+  if (saveState.value === "editing") return "正在编辑…";
+  if (saveState.value === "saving") return "保存中…";
+  if (saveState.value === "saved") return savedAt.value ? `已保存 ${savedAt.value}` : "已保存";
+  if (saveState.value === "error") return "保存失败，将自动重试";
+  return "";
+});
+
+function queueBodySave(delay = AUTO_SAVE_MS) {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    saveTimer = null;
+    void flushBody();
+  }, delay);
+}
+
+function toggleItem(nextBody: string) {
+  draftBody.value = nextBody;
+  saveState.value = "editing";
+  queueBodySave();
+}
+
+async function convertList() {
+  if (!task.value) return;
+  draftBody.value = convertBulletsToChecklist(shownBody.value);
+  queueBodySave(0);
+}
+
+function flushOnLeave() {
+  if (!task.value || draftBody.value === null || saving) return;
+  if (saveTimer) {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+  }
+  void api.flushTaskBody(task.value.id, draftBody.value);
+}
+
+function onVisibilityChange() {
+  if (document.visibilityState === "hidden") flushOnLeave();
+}
+
+if (typeof document !== "undefined") {
+  document.addEventListener("visibilitychange", onVisibilityChange);
+  window.addEventListener("pagehide", flushOnLeave);
+}
+
+onBeforeUnmount(() => {
+  document.removeEventListener("visibilitychange", onVisibilityChange);
+  window.removeEventListener("pagehide", flushOnLeave);
+  if (saveTimer) {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    void flushBody();
+  }
+});
 
 async function removeConfirmed() {
   if (!task.value || pending.value) return;
@@ -102,6 +235,7 @@ async function removeConfirmed() {
         </summary>
         <div class="menu-panel">
           <button type="button" @click="entry?.editTask(task)">编辑</button>
+          <button v-if="canConvert" type="button" :disabled="pending" @click="convertList">转成可勾清单</button>
           <button v-if="canDelay" type="button" @click="delayToToday">顺延到今天</button>
           <button type="button" class="danger" @click="confirming = true">删除</button>
         </div>
@@ -120,11 +254,13 @@ async function removeConfirmed() {
         <span v-if="task.startDate">{{ relativeDay(task.startDate, today) }}开始 · {{ task.startDate.slice(5) }}</span>
         <span>{{ relativeDay(task.dueDate, today) }}截止 · {{ task.dueDate.slice(5) }}</span>
         <span v-if="task.checked" class="ok">已检查</span>
+        <span v-if="progress.total" class="progress">清单 {{ progress.done }}/{{ progress.total }}</span>
+        <span v-if="saveLabel" class="save-state" :class="`save-state--${saveState}`">{{ saveLabel }}</span>
       </p>
     </section>
 
     <p v-if="error" class="error">{{ error }}</p>
-    <MarkdownView :body="task.body || '没有正文'" />
+    <MarkdownView :body="shownBody || '没有正文'" interactive @toggle="toggleItem" />
 
     <section v-if="task.attachments.length" class="attachments">
       <h2>附件</h2>
@@ -312,6 +448,28 @@ h1 {
 
 .dates .ok {
   color: var(--success);
+}
+
+.dates .progress {
+  color: var(--primary);
+}
+
+.dates .save-state {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.dates .save-state--editing,
+.dates .save-state--saving {
+  color: var(--accent, var(--primary));
+}
+
+.dates .save-state--saved {
+  color: var(--success);
+}
+
+.dates .save-state--error {
+  color: var(--danger);
 }
 
 .error {

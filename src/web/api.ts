@@ -49,6 +49,14 @@ export const api = {
   createTask: (body: Record<string, unknown>) => request<Task>("/api/tasks", { method: "POST", body: JSON.stringify(body) }),
   updateTask: (id: string, body: Record<string, unknown>) =>
     request<Task>(`/api/tasks/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  flushTaskBody: (id: string, body: string) =>
+    fetch(`/api/tasks/${id}`, {
+      method: "PATCH",
+      credentials: "same-origin",
+      keepalive: true,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ body }),
+    }).catch(() => undefined),
   deleteTask: (id: string) => request<void>(`/api/tasks/${id}`, { method: "DELETE" }),
   createBehavior: (body: Record<string, unknown>) =>
     request<Behavior>("/api/behaviors", { method: "POST", body: JSON.stringify(body) }),

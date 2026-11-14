@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { checklistProgress } from "../../shared/checklist";
 import type { Task } from "../../shared/schema";
 import { taskLabel } from "../../shared/labels";
 
@@ -8,6 +9,7 @@ defineEmits<{ open: [task: Task]; toggle: [task: Task] }>();
 
 const label = computed(() => taskLabel(props.task, props.today));
 const attachmentCount = computed(() => props.task.attachments.length);
+const progress = computed(() => checklistProgress(props.task.body));
 </script>
 
 <template>
@@ -32,6 +34,9 @@ const attachmentCount = computed(() => props.task.attachments.length);
           <span v-else-if="task.type === 'todo'" class="subject">待办</span>
           <span v-if="label" class="label" :class="label.tone">{{ label.text }}</span>
           <span v-if="task.checked" class="checked">已检查</span>
+          <span v-if="progress.total" class="progress" :class="{ done: progress.done === progress.total }">
+            {{ progress.done }}/{{ progress.total }}
+          </span>
           <span v-if="task.childId === null" class="orphan">孤儿</span>
         </span>
       </span>
@@ -152,6 +157,15 @@ const attachmentCount = computed(() => props.task.attachments.length);
 }
 
 .checked {
+  color: var(--success);
+}
+
+.progress {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.progress.done {
   color: var(--success);
 }
 
