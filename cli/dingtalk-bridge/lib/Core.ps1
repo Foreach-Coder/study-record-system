@@ -1,6 +1,6 @@
 ﻿# Shared native PowerShell runtime. No output or external runtime is required to load it.
 if (-not ('DingtalkUtils.Json' -as [type])) {
-    $duCompileDirectory = [IO.Path]::GetFullPath((Join-Path (Get-Location).Path '.temp\dingtalk-utils\.runtime'))
+    $duCompileDirectory = [IO.Path]::GetFullPath((Join-Path (Split-Path -Parent $PSScriptRoot) '.temp\dingtalk-utils\.runtime'))
     $null = [IO.Directory]::CreateDirectory($duCompileDirectory)
     $duOriginalTemp = [Environment]::GetEnvironmentVariable('TEMP','Process')
     $duOriginalTmp = [Environment]::GetEnvironmentVariable('TMP','Process')

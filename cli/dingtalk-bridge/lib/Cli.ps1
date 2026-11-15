@@ -31,7 +31,7 @@ bridge 只读调用已登录钉钉客户端；须有已加载的客户端本地�
 bridge batch 的 JSON 是 [{"method":"listMessages","params":{"cid":"123","start":"2026-11-04","end":"2026-11-05"}}]。
 不完整结果返回 success=false / complete=false；消息完整性仅针对客户端可见历史。
 班级圈、打卡、受保护媒体等未覆盖功能不在本 CLI 范围内；bridge 不自动回退或切换账号。
-临时文件全部位于当前目录 .temp/ 下。
+临时文件全部位于项目目录 .temp/ 下。
 '@
 }
 
