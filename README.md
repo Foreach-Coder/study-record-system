@@ -28,6 +28,7 @@
 | 单元/接口测试 | Vitest + `@cloudflare/vitest-plugin` |
 | 端到端测试 | Playwright |
 | CLI | Python 3（标准库，无第三方依赖） |
+| 桥接 CLI | Windows PowerShell 5.1 / 7 + Frida |
 
 ## 目录
 
@@ -43,7 +44,9 @@
 │  ├─ worker/          # Worker/API 测试
 │  ├─ e2e/             # Playwright
 │  └─ cli/             # pytest
-├─ cli/                # 学习记录 CLI
+├─ cli/
+│  ├─ dingtalk-bridge/ # 钉钉只读桥接 CLI（PowerShell + Frida）
+│  └─ study-record/    # 学习记录 CLI（Python）
 ├─ scripts/            # 密钥生成、数据迁移
 ├─ public/             # 静态资源与 _headers
 ├─ cloudflare.config.ts
@@ -182,6 +185,24 @@ python cli/study-record/study-record-cli.py --help
 
 - `study-record`：手动录入/查询
 - `study-record-sync`：从钉钉群与家校本同步
+
+## 钉钉只读桥接
+
+`cli/dingtalk-bridge/` 是从旧工具 `codes\dingtalk-utils` 抽出的只读钉钉桥接，抽取前后按 11 个只读用例逐项对比过输出（只规范化 `processId` 这类易变字段）：
+
+- 用 Frida 把本地 Agent 注入**已运行并登录**的 Windows 桌面钉钉，在客户端自己的 CEF 页面里调用只读接口。
+- 13 个 `bridge` 子命令（含 `batch` 与 `downloadImage`），覆盖群、消息、教育角色、家校本、通知和群待办；不发送、不发布、不确认、不切号。
+- 版本门：客户端与内置 CEF 各有一道白名单，钉钉升级后先跑一条只读命令确认，不要绕过检查。
+- 临时文件只写项目目录 `.temp\dingtalk-bridge\`，不碰系统临时目录。
+
+```powershell
+.\cli\dingtalk-bridge\dingtalk-bridge.ps1 bridge --help
+.\cli\dingtalk-bridge\dingtalk-bridge.ps1 bridge listMessages --cid 77728566311 --start '2026-11-04' --end '2026-11-05'
+```
+
+运行前提（`frida` CLI 在 PATH 上）、完整命令表、批量格式与只读边界见 [`cli/dingtalk-bridge/README.md`](./cli/dingtalk-bridge/README.md)。
+
+旧工具 `codes\dingtalk-utils` 现在只剩 `qwenwork-env`（DWS 环境与凭据隔离）和转发到本仓库 CLI 的 `modules\bridge.ps1` 兼容层，bridge 实现与测试只在本仓库维护。
 
 ## 数据模型
 
