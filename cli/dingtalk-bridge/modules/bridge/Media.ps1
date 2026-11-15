@@ -29,12 +29,12 @@ function ConvertTo-DuBridgeImageReference {
 
 function Resolve-DuBridgeImageOutput {
     param([string]$Output,[string]$ResourceId,[string]$Extension)
-    $root=Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+    $root=Get-DuBridgeRoot
     $allowed=@([IO.Path]::GetFullPath((Join-Path (Get-Location) '.temp')),[IO.Path]::GetFullPath((Join-Path $root '.temp')))
     if([string]::IsNullOrEmpty($Output)){
         $hash=[Security.Cryptography.SHA256]::Create()
         try{$name=([BitConverter]::ToString($hash.ComputeHash([Text.Encoding]::UTF8.GetBytes($ResourceId)))).Replace('-','').ToLowerInvariant()}finally{$hash.Dispose()}
-        $Output=Join-Path $allowed[0] ('dingtalk-utils\bridge\images\'+$name+'.'+$Extension)
+        $Output=Join-Path $root ('.temp\dingtalk-bridge\images\'+$name+'.'+$Extension)
     }
     $path=[IO.Path]::GetFullPath($Output);$inside=$false
     foreach($base in $allowed){if($path.StartsWith($base.TrimEnd('\')+'\',[StringComparison]::OrdinalIgnoreCase)){$inside=$true}}
