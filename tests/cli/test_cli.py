@@ -102,8 +102,15 @@ def run(tmp_path, *args, base=None):
         "PATH": os.environ.get("PATH", ""),
         "SYSTEMROOT": os.environ.get("SYSTEMROOT", ""),
         "STUDY_RECORD_CONFIG": str(tmp_path / "missing.json"),
+        # Pin the child's stdio encoding: the parent shell may export
+        # PYTHONUTF8/PYTHONIOENCODING, which would otherwise make this test's
+        # own decode disagree with the child's output encoding.
+        "PYTHONIOENCODING": "utf-8",
+        "PYTHONUTF8": "1",
     }
-    return subprocess.run(command, capture_output=True, text=True, timeout=30, env=env)
+    return subprocess.run(
+        command, capture_output=True, text=True, encoding="utf-8", timeout=30, env=env
+    )
 
 
 def test_show_returns_spec_shape(tmp_path, base):
