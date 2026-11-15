@@ -1,0 +1,424 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Synthetic PowerShell compatibility vectors for Node.js migration; no real profile, conversation, message, or body data.",
+  "provenance": {
+    "sourcePath": "D:\\老力与响\\scripts\\Merge-DingTalkMessages.ps1",
+    "sourceSha256": "90139b54755fbc6d50a6eb26a483121bd7e70b9e519d96ce1291d92d78d81e8f",
+    "powershellVersion": "7.6.5",
+    "algorithmSourceLines": {
+      "requireId": "42-44",
+      "parseTime": "45-52",
+      "normalizeTime": "53",
+      "displayTime": "54",
+      "operationIdentityAndKey": "336-337"
+    },
+    "extraction": "The named function definitions and identity/key assignment statements were evaluated directly from the existing source; the script itself was not executed."
+  },
+  "contract": {
+    "identityPropertyOrder": [
+      "profile",
+      "sourceGroupId",
+      "destinationGroupId",
+      "start",
+      "end"
+    ],
+    "defaultOffset": "+08:00",
+    "normalizedTimeFormat": "yyyy-MM-ddTHH:mm:ss.fffffffzzz",
+    "precision": "100 nanoseconds; retain all seven fractional digits.",
+    "hashInput": "UTF-8 bytes of PowerShell ConvertTo-Json -Compress output with no BOM and no trailing newline.",
+    "plusSlash": "Literal + and / are not escaped.",
+    "specialUnicode": "PowerShell escapes U+0085, U+2028, U+2029 as lowercase hexadecimal JSON escapes. Native JSON.stringify emits these characters literally.",
+    "encoderOnly": "The three special whitespace code points fail the existing Require-Id predicate and are intentionally excluded from valid operation identity vectors."
+  },
+  "operationVectors": [
+    {
+      "name": "whole-day-date-default-beijing",
+      "input": {
+        "profile": "synthetic-corp:synthetic-operator",
+        "sourceGroupId": "cidSyntheticSource+One/==",
+        "destinationGroupId": "cidSyntheticDestination+Two/==",
+        "start": "2026-10-30",
+        "end": "2026-10-31"
+      },
+      "expected": {
+        "identity": {
+          "profile": "synthetic-corp:synthetic-operator",
+          "sourceGroupId": "cidSyntheticSource+One/==",
+          "destinationGroupId": "cidSyntheticDestination+Two/==",
+          "start": "2026-10-30T00:00:00.0000000+08:00",
+          "end": "2026-10-31T00:00:00.0000000+08:00"
+        },
+        "startDisplay": "2026-10-30 00:00:00",
+        "endDisplay": "2026-10-31 00:00:00",
+        "startUtcTicks": "639288864000000000",
+        "endUtcTicks": "639289728000000000",
+        "compactJson": "{\"profile\":\"synthetic-corp:synthetic-operator\",\"sourceGroupId\":\"cidSyntheticSource+One/==\",\"destinationGroupId\":\"cidSyntheticDestination+Two/==\",\"start\":\"2026-10-30T00:00:00.0000000+08:00\",\"end\":\"2026-10-31T00:00:00.0000000+08:00\"}",
+        "sha256": "8d57a6ed04d91437418d9c06178f8a26ae445647a4ef85acc7d8b927fc97025f"
+      },
+      "equivalenceGroup": "whole-day"
+    },
+    {
+      "name": "whole-day-equivalent-z",
+      "input": {
+        "profile": "synthetic-corp:synthetic-operator",
+        "sourceGroupId": "cidSyntheticSource+One/==",
+        "destinationGroupId": "cidSyntheticDestination+Two/==",
+        "start": "2026-10-29T16:00:00Z",
+        "end": "2026-10-30T16:00:00Z"
+      },
+      "expected": {
+        "identity": {
+          "profile": "synthetic-corp:synthetic-operator",
+          "sourceGroupId": "cidSyntheticSource+One/==",
+          "destinationGroupId": "cidSyntheticDestination+Two/==",
+          "start": "2026-10-30T00:00:00.0000000+08:00",
+          "end": "2026-10-31T00:00:00.0000000+08:00"
+        },
+        "startDisplay": "2026-10-30 00:00:00",
+        "endDisplay": "2026-10-31 00:00:00",
+        "startUtcTicks": "639288864000000000",
+        "endUtcTicks": "639289728000000000",
+        "compactJson": "{\"profile\":\"synthetic-corp:synthetic-operator\",\"sourceGroupId\":\"cidSyntheticSource+One/==\",\"destinationGroupId\":\"cidSyntheticDestination+Two/==\",\"start\":\"2026-10-30T00:00:00.0000000+08:00\",\"end\":\"2026-10-31T00:00:00.0000000+08:00\"}",
+        "sha256": "8d57a6ed04d91437418d9c06178f8a26ae445647a4ef85acc7d8b927fc97025f"
+      },
+      "equivalenceGroup": "whole-day"
+    },
+    {
+      "name": "whole-day-equivalent-minus-offset",
+      "input": {
+        "profile": "synthetic-corp:synthetic-operator",
+        "sourceGroupId": "cidSyntheticSource+One/==",
+        "destinationGroupId": "cidSyntheticDestination+Two/==",
+        "start": "2026-10-29T11:00:00-05:00",
+        "end": "2026-10-30T11:00:00-05:00"
+      },
+      "expected": {
+        "identity": {
+          "profile": "synthetic-corp:synthetic-operator",
+          "sourceGroupId": "cidSyntheticSource+One/==",
+          "destinationGroupId": "cidSyntheticDestination+Two/==",
+          "start": "2026-10-30T00:00:00.0000000+08:00",
+          "end": "2026-10-31T00:00:00.0000000+08:00"
+        },
+        "startDisplay": "2026-10-30 00:00:00",
+        "endDisplay": "2026-10-31 00:00:00",
+        "startUtcTicks": "639288864000000000",
+        "endUtcTicks": "639289728000000000",
+        "compactJson": "{\"profile\":\"synthetic-corp:synthetic-operator\",\"sourceGroupId\":\"cidSyntheticSource+One/==\",\"destinationGroupId\":\"cidSyntheticDestination+Two/==\",\"start\":\"2026-10-30T00:00:00.0000000+08:00\",\"end\":\"2026-10-31T00:00:00.0000000+08:00\"}",
+        "sha256": "8d57a6ed04d91437418d9c06178f8a26ae445647a4ef85acc7d8b927fc97025f"
+      },
+      "equivalenceGroup": "whole-day"
+    },
+    {
+      "name": "seven-nonzero-fraction-digits",
+      "input": {
+        "profile": "synthetic-corp:synthetic-operator",
+        "sourceGroupId": "cidSyntheticSource+One/==",
+        "destinationGroupId": "cidSyntheticDestination+Two/==",
+        "start": "2026-10-30T00:00:00.1234567+08:00",
+        "end": "2026-10-30T00:00:00.1234568+08:00"
+      },
+      "expected": {
+        "identity": {
+          "profile": "synthetic-corp:synthetic-operator",
+          "sourceGroupId": "cidSyntheticSource+One/==",
+          "destinationGroupId": "cidSyntheticDestination+Two/==",
+          "start": "2026-10-30T00:00:00.1234567+08:00",
+          "end": "2026-10-30T00:00:00.1234568+08:00"
+        },
+        "startDisplay": "2026-10-30 00:00:00.1234567",
+        "endDisplay": "2026-10-30 00:00:00.1234568",
+        "startUtcTicks": "639288864001234567",
+        "endUtcTicks": "639288864001234568",
+        "compactJson": "{\"profile\":\"synthetic-corp:synthetic-operator\",\"sourceGroupId\":\"cidSyntheticSource+One/==\",\"destinationGroupId\":\"cidSyntheticDestination+Two/==\",\"start\":\"2026-10-30T00:00:00.1234567+08:00\",\"end\":\"2026-10-30T00:00:00.1234568+08:00\"}",
+        "sha256": "60c17771ee64f6a34fe0746b3208b2eb08675f5bd4bb48c288bebc38846d02ec"
+      },
+      "equivalenceGroup": "hundred-nanoseconds"
+    },
+    {
+      "name": "seven-nonzero-fraction-equivalent-z",
+      "input": {
+        "profile": "synthetic-corp:synthetic-operator",
+        "sourceGroupId": "cidSyntheticSource+One/==",
+        "destinationGroupId": "cidSyntheticDestination+Two/==",
+        "start": "2026-10-29T16:00:00.1234567Z",
+        "end": "2026-10-29T16:00:00.1234568Z"
+      },
+      "expected": {
+        "identity": {
+          "profile": "synthetic-corp:synthetic-operator",
+          "sourceGroupId": "cidSyntheticSource+One/==",
+          "destinationGroupId": "cidSyntheticDestination+Two/==",
+          "start": "2026-10-30T00:00:00.1234567+08:00",
+          "end": "2026-10-30T00:00:00.1234568+08:00"
+        },
+        "startDisplay": "2026-10-30 00:00:00.1234567",
+        "endDisplay": "2026-10-30 00:00:00.1234568",
+        "startUtcTicks": "639288864001234567",
+        "endUtcTicks": "639288864001234568",
+        "compactJson": "{\"profile\":\"synthetic-corp:synthetic-operator\",\"sourceGroupId\":\"cidSyntheticSource+One/==\",\"destinationGroupId\":\"cidSyntheticDestination+Two/==\",\"start\":\"2026-10-30T00:00:00.1234567+08:00\",\"end\":\"2026-10-30T00:00:00.1234568+08:00\"}",
+        "sha256": "60c17771ee64f6a34fe0746b3208b2eb08675f5bd4bb48c288bebc38846d02ec"
+      },
+      "equivalenceGroup": "hundred-nanoseconds"
+    },
+    {
+      "name": "fraction-leading-zeros-at-midnight",
+      "input": {
+        "profile": "synthetic-corp:synthetic-operator",
+        "sourceGroupId": "cidSyntheticSource+One/==",
+        "destinationGroupId": "cidSyntheticDestination+Two/==",
+        "start": "2026-10-30T23:59:59.9999999",
+        "end": "2026-10-31T00:00:00.0000001"
+      },
+      "expected": {
+        "identity": {
+          "profile": "synthetic-corp:synthetic-operator",
+          "sourceGroupId": "cidSyntheticSource+One/==",
+          "destinationGroupId": "cidSyntheticDestination+Two/==",
+          "start": "2026-10-30T23:59:59.9999999+08:00",
+          "end": "2026-10-31T00:00:00.0000001+08:00"
+        },
+        "startDisplay": "2026-10-30 23:59:59.9999999",
+        "endDisplay": "2026-10-31 00:00:00.0000001",
+        "startUtcTicks": "639289727999999999",
+        "endUtcTicks": "639289728000000001",
+        "compactJson": "{\"profile\":\"synthetic-corp:synthetic-operator\",\"sourceGroupId\":\"cidSyntheticSource+One/==\",\"destinationGroupId\":\"cidSyntheticDestination+Two/==\",\"start\":\"2026-10-30T23:59:59.9999999+08:00\",\"end\":\"2026-10-31T00:00:00.0000001+08:00\"}",
+        "sha256": "34650eecd94f1993ecc5b8ac9a0eb2af89e8c7d6d85d1157b23ba7976cee306e"
+      }
+    },
+    {
+      "name": "legal-plus-slash-quote-backslash-ids",
+      "input": {
+        "profile": "synthetic+corp/user:operator",
+        "sourceGroupId": "cidSynthetic+/\"\\one==",
+        "destinationGroupId": "cidDestination\\path/\"two+'<>&==",
+        "start": "2026-10-30",
+        "end": "2026-10-31"
+      },
+      "expected": {
+        "identity": {
+          "profile": "synthetic+corp/user:operator",
+          "sourceGroupId": "cidSynthetic+/\"\\one==",
+          "destinationGroupId": "cidDestination\\path/\"two+'<>&==",
+          "start": "2026-10-30T00:00:00.0000000+08:00",
+          "end": "2026-10-31T00:00:00.0000000+08:00"
+        },
+        "startDisplay": "2026-10-30 00:00:00",
+        "endDisplay": "2026-10-31 00:00:00",
+        "startUtcTicks": "639288864000000000",
+        "endUtcTicks": "639289728000000000",
+        "compactJson": "{\"profile\":\"synthetic+corp/user:operator\",\"sourceGroupId\":\"cidSynthetic+/\\\"\\\\one==\",\"destinationGroupId\":\"cidDestination\\\\path/\\\"two+'<>&==\",\"start\":\"2026-10-30T00:00:00.0000000+08:00\",\"end\":\"2026-10-31T00:00:00.0000000+08:00\"}",
+        "sha256": "110f7e1ad4478e65d8baeb9ac23c64bc50aeb22552510576ba42e3b21390e4ab"
+      }
+    },
+    {
+      "name": "leap-day-one-fraction-digit",
+      "input": {
+        "profile": "synthetic-corp:synthetic-operator",
+        "sourceGroupId": "cidSyntheticSource+One/==",
+        "destinationGroupId": "cidSyntheticDestination+Two/==",
+        "start": "2028-02-29T00:00:00.1",
+        "end": "2028-03-01"
+      },
+      "expected": {
+        "identity": {
+          "profile": "synthetic-corp:synthetic-operator",
+          "sourceGroupId": "cidSyntheticSource+One/==",
+          "destinationGroupId": "cidSyntheticDestination+Two/==",
+          "start": "2028-02-29T00:00:00.1000000+08:00",
+          "end": "2028-03-01T00:00:00.0000000+08:00"
+        },
+        "startDisplay": "2028-02-29 00:00:00.1",
+        "endDisplay": "2028-03-01 00:00:00",
+        "startUtcTicks": "639709632001000000",
+        "endUtcTicks": "639710496000000000",
+        "compactJson": "{\"profile\":\"synthetic-corp:synthetic-operator\",\"sourceGroupId\":\"cidSyntheticSource+One/==\",\"destinationGroupId\":\"cidSyntheticDestination+Two/==\",\"start\":\"2028-02-29T00:00:00.1000000+08:00\",\"end\":\"2028-03-01T00:00:00.0000000+08:00\"}",
+        "sha256": "c77df383dc48cf7aeaab5ab70f83dcf80dc7a7afed436dd1303c01d2564dfefc"
+      }
+    },
+    {
+      "name": "year-boundary-from-positive-fourteen",
+      "input": {
+        "profile": "synthetic-corp:synthetic-operator",
+        "sourceGroupId": "cidSyntheticSource+One/==",
+        "destinationGroupId": "cidSyntheticDestination+Two/==",
+        "start": "2027-01-01T00:00:00.7654321+14:00",
+        "end": "2027-01-01T06:00:00.7654321+14:00"
+      },
+      "expected": {
+        "identity": {
+          "profile": "synthetic-corp:synthetic-operator",
+          "sourceGroupId": "cidSyntheticSource+One/==",
+          "destinationGroupId": "cidSyntheticDestination+Two/==",
+          "start": "2026-12-31T18:00:00.7654321+08:00",
+          "end": "2027-01-01T00:00:00.7654321+08:00"
+        },
+        "startDisplay": "2026-12-31 18:00:00.7654321",
+        "endDisplay": "2027-01-01 00:00:00.7654321",
+        "startUtcTicks": "639343080007654321",
+        "endUtcTicks": "639343296007654321",
+        "compactJson": "{\"profile\":\"synthetic-corp:synthetic-operator\",\"sourceGroupId\":\"cidSyntheticSource+One/==\",\"destinationGroupId\":\"cidSyntheticDestination+Two/==\",\"start\":\"2026-12-31T18:00:00.7654321+08:00\",\"end\":\"2027-01-01T00:00:00.7654321+08:00\"}",
+        "sha256": "51543564d03290b75931e3f89953614aae861cd4e32454816eedc1be50e77c3b"
+      }
+    },
+    {
+      "name": "year-boundary-from-minus-twelve",
+      "input": {
+        "profile": "synthetic-corp:synthetic-operator",
+        "sourceGroupId": "cidSyntheticSource+One/==",
+        "destinationGroupId": "cidSyntheticDestination+Two/==",
+        "start": "2026-12-31T05:00:00-12:00",
+        "end": "2026-12-31T06:00:00-12:00"
+      },
+      "expected": {
+        "identity": {
+          "profile": "synthetic-corp:synthetic-operator",
+          "sourceGroupId": "cidSyntheticSource+One/==",
+          "destinationGroupId": "cidSyntheticDestination+Two/==",
+          "start": "2027-01-01T01:00:00.0000000+08:00",
+          "end": "2027-01-01T02:00:00.0000000+08:00"
+        },
+        "startDisplay": "2027-01-01 01:00:00",
+        "endDisplay": "2027-01-01 02:00:00",
+        "startUtcTicks": "639343332000000000",
+        "endUtcTicks": "639343368000000000",
+        "compactJson": "{\"profile\":\"synthetic-corp:synthetic-operator\",\"sourceGroupId\":\"cidSyntheticSource+One/==\",\"destinationGroupId\":\"cidSyntheticDestination+Two/==\",\"start\":\"2027-01-01T01:00:00.0000000+08:00\",\"end\":\"2027-01-01T02:00:00.0000000+08:00\"}",
+        "sha256": "e2e35b3f4ef0b50f123491b5cb199ba5d5245cc53f602bf9547fa30b9ec47b01"
+      }
+    },
+    {
+      "name": "space-separator-minute-only",
+      "input": {
+        "profile": "synthetic-corp:synthetic-operator",
+        "sourceGroupId": "cidSyntheticSource+One/==",
+        "destinationGroupId": "cidSyntheticDestination+Two/==",
+        "start": "2026-10-30 07:05",
+        "end": "2026-10-30T07:06+08:00"
+      },
+      "expected": {
+        "identity": {
+          "profile": "synthetic-corp:synthetic-operator",
+          "sourceGroupId": "cidSyntheticSource+One/==",
+          "destinationGroupId": "cidSyntheticDestination+Two/==",
+          "start": "2026-10-30T07:05:00.0000000+08:00",
+          "end": "2026-10-30T07:06:00.0000000+08:00"
+        },
+        "startDisplay": "2026-10-30 07:05:00",
+        "endDisplay": "2026-10-30 07:06:00",
+        "startUtcTicks": "639289119000000000",
+        "endUtcTicks": "639289119600000000",
+        "compactJson": "{\"profile\":\"synthetic-corp:synthetic-operator\",\"sourceGroupId\":\"cidSyntheticSource+One/==\",\"destinationGroupId\":\"cidSyntheticDestination+Two/==\",\"start\":\"2026-10-30T07:05:00.0000000+08:00\",\"end\":\"2026-10-30T07:06:00.0000000+08:00\"}",
+        "sha256": "97ad82cf4485d63c2d839fd34933019eb89abae756f4677e903e8fea53e27374"
+      }
+    },
+    {
+      "name": "six-fraction-digits-and-trailing-zero-display",
+      "input": {
+        "profile": "synthetic-corp:synthetic-operator",
+        "sourceGroupId": "cidSyntheticSource+One/==",
+        "destinationGroupId": "cidSyntheticDestination+Two/==",
+        "start": "2026-10-30T12:34:56.120340+08:00",
+        "end": "2026-10-30T12:34:57.0000000+08:00"
+      },
+      "expected": {
+        "identity": {
+          "profile": "synthetic-corp:synthetic-operator",
+          "sourceGroupId": "cidSyntheticSource+One/==",
+          "destinationGroupId": "cidSyntheticDestination+Two/==",
+          "start": "2026-10-30T12:34:56.1203400+08:00",
+          "end": "2026-10-30T12:34:57.0000000+08:00"
+        },
+        "startDisplay": "2026-10-30 12:34:56.12034",
+        "endDisplay": "2026-10-30 12:34:57",
+        "startUtcTicks": "639289316961203400",
+        "endUtcTicks": "639289316970000000",
+        "compactJson": "{\"profile\":\"synthetic-corp:synthetic-operator\",\"sourceGroupId\":\"cidSyntheticSource+One/==\",\"destinationGroupId\":\"cidSyntheticDestination+Two/==\",\"start\":\"2026-10-30T12:34:56.1203400+08:00\",\"end\":\"2026-10-30T12:34:57.0000000+08:00\"}",
+        "sha256": "629216a96eab465b47a1b9b8a9eedb5ff9e0b2afce3811cf99ddb8dcf9d7b853"
+      }
+    }
+  ],
+  "encoderOnlyVectors": [
+    {
+      "name": "ordinary-json-escapes-and-allowed-unicode",
+      "input": {
+        "s": "a+b/c\\d\"e'<>&\u0000\b\t\n\f\r汉字😀"
+      },
+      "validAsId": false,
+      "reason": "Control characters are rejected by Require-Id; this vector tests encoding only.",
+      "expected": {
+        "compactJson": "{\"s\":\"a+b/c\\\\d\\\"e'<>&\\u0000\\b\\t\\n\\f\\r汉字😀\"}",
+        "sha256": "6855fa1571a29bb8f95a72255d5b47af3b6455e3a24b85355ee4f1f057e56dad"
+      }
+    },
+    {
+      "name": "u0085-next-line",
+      "input": {
+        "s": "left\u0085right"
+      },
+      "validAsId": false,
+      "reason": "U+0085 matches .NET regex \\s and is rejected by Require-Id.",
+      "expected": {
+        "compactJson": "{\"s\":\"left\\u0085right\"}",
+        "sha256": "910692462fc90ff9a02fd933d42ac004e3c8f90299243a2d9e14c14fe8f4af18"
+      }
+    },
+    {
+      "name": "u2028-line-separator",
+      "input": {
+        "s": "left\u2028right"
+      },
+      "validAsId": false,
+      "reason": "U+2028 matches .NET regex \\s and is rejected by Require-Id.",
+      "expected": {
+        "compactJson": "{\"s\":\"left\\u2028right\"}",
+        "sha256": "6af55daf3c14e6144f93c017bf62841f6a6f16186782adf31cf2c6ece3f96b3e"
+      }
+    },
+    {
+      "name": "u2029-paragraph-separator",
+      "input": {
+        "s": "left\u2029right"
+      },
+      "validAsId": false,
+      "reason": "U+2029 matches .NET regex \\s and is rejected by Require-Id.",
+      "expected": {
+        "compactJson": "{\"s\":\"left\\u2029right\"}",
+        "sha256": "cab4cf2ce9e70978da0183f18ee49bf11d1e16860f319aebbcf72cfdb483598e"
+      }
+    },
+    {
+      "name": "all-three-special-separators",
+      "input": {
+        "s": "left\u0085\u2028\u2029right"
+      },
+      "validAsId": false,
+      "reason": "These separators are illegal in IDs; retain them only in encoder contract vectors.",
+      "expected": {
+        "compactJson": "{\"s\":\"left\\u0085\\u2028\\u2029right\"}",
+        "sha256": "03d6c90db0543acccfc9df4dc009ed520b7a0129a4e355ddceed632c878c3d00"
+      }
+    }
+  ],
+  "rejectedTimeVectors": [
+    {
+      "name": "non-leap-february-29",
+      "value": "2026-02-29",
+      "expected": "reject"
+    },
+    {
+      "name": "eight-fraction-digits",
+      "value": "2026-10-30T00:00:00.12345678+08:00",
+      "expected": "reject"
+    },
+    {
+      "name": "twenty-four-hour",
+      "value": "2026-10-30T24:00:00+08:00",
+      "expected": "reject"
+    },
+    {
+      "name": "offset-over-fourteen-hours",
+      "value": "2026-10-30T00:00:00+14:01",
+      "expected": "reject"
+    }
+  ]
+}
