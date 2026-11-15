@@ -166,16 +166,16 @@ CLI 是一个轻量 Python 客户端，读取本机配置：
 也可以使用环境变量 `STUDY_RECORD_BASE_URL`、`STUDY_RECORD_TOKEN`。
 
 ```bash
-python cli/study-record-cli.py students
-python cli/study-record-cli.py show --date 2026-11-09
-python cli/study-record-cli.py doctor
-python cli/study-record-cli.py upload-file ./homework.pdf
+python cli/study-record/study-record-cli.py students
+python cli/study-record/study-record-cli.py show --date 2026-11-09
+python cli/study-record/study-record-cli.py doctor
+python cli/study-record/study-record-cli.py upload-file ./homework.pdf
 ```
 
 其余命令见：
 
 ```bash
-python cli/study-record-cli.py --help
+python cli/study-record/study-record-cli.py --help
 ```
 
 配套的 Agent 技能不在本仓库内：
