@@ -8,5 +8,5 @@ param(
 
 $BridgeRoot = $PSScriptRoot
 . (Join-Path $BridgeRoot 'lib\Application.ps1')
-Invoke-DuCommand $Rest
+Invoke-DuApplication $Rest
 exit $LASTEXITCODE
