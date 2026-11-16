@@ -241,7 +241,7 @@ python cli/study-record/study-record-cli.py --help
 - 不提供多用户/角色权限
 - 附件类型为 pdf/doc/docx/xls/xlsx/ppt/pptx/txt/zip 与常见图片/音频，单文件 ≤20MB
 - 生产数据迁移使用快照 + 短停写切换，不做双写
-- 旧 WorkBuddy 页面与旧 `xuexi-record` / `xuexi-sync` 技能保留在切换前，不随本仓库发布
+- 旧 WorkBuddy 页面与 `xuexi-record` / `xuexi-sync` / `scripts/Merge-DingTalkMessages.ps1` 已于 2026-11-16 删除，不随本仓库发布
 
 ## License
 
