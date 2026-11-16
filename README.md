@@ -197,7 +197,7 @@ python cli/study-record/study-record-cli.py --help
 
 ```powershell
 .\cli\dingtalk-bridge\dingtalk-bridge.ps1 bridge --help
-.\cli\dingtalk-bridge\dingtalk-bridge.ps1 bridge listMessages --cid 77728566311 --start '2026-11-04' --end '2026-11-05'
+.\cli\dingtalk-bridge\dingtalk-bridge.ps1 bridge listMessages --cid 10000000001 --start '2026-11-04' --end '2026-11-05'
 ```
 
 运行前提（`frida` CLI 在 PATH 上）、完整命令表、批量格式与只读边界见 [`cli/dingtalk-bridge/README.md`](./cli/dingtalk-bridge/README.md)。

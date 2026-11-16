@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "purpose": "Synthetic PowerShell compatibility vectors for Node.js migration; no real profile, conversation, message, or body data.",
   "provenance": {
-    "sourcePath": "D:\\老力与响\\scripts\\Merge-DingTalkMessages.ps1",
+    "sourcePath": "<已删除的 scripts\\Merge-DingTalkMessages.ps1>",
     "sourceSha256": "90139b54755fbc6d50a6eb26a483121bd7e70b9e519d96ce1291d92d78d81e8f",
     "powershellVersion": "7.6.5",
     "algorithmSourceLines": {

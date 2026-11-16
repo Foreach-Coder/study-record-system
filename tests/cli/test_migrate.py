@@ -15,19 +15,19 @@ def run_parser(tmp_path, html=""):
     source = tmp_path / "source"
     source.mkdir()
     (source / "孩子档案.csv").write_text(
-        CHILD_HEADER + "李律研,2020-05-21T00:00:00Z,一年级,松山湖中心小学,一（12）班,银湲,\n",
+        CHILD_HEADER + "小明,2020-05-21T00:00:00Z,一年级,示例中心小学,一（12）班,王老师,\n",
         encoding="utf-8-sig",
     )
     (source / "任务表.csv").write_text(
         TASK_HEADER
-        + '口算,作业,数学,2026-11-07T00:00:00Z,true,false,李律研,https://example.com/a.jpg,爸爸,"口算一页\n'
+        + '口算,作业,数学,2026-11-07T00:00:00Z,true,false,小明,https://example.com/a.jpg,爸爸,"口算一页\n'
         + '![图](https://example.com/b.jpg)\n",2026-11-07T00:00:00Z\n'
-        + "跳绳,待办,,2026-11-08T00:00:00Z,false,false,李律研,,爸爸,,2026-11-06T00:00:00Z\n",
+        + "跳绳,待办,,2026-11-08T00:00:00Z,false,false,小明,,爸爸,,2026-11-06T00:00:00Z\n",
         encoding="utf-8-sig",
     )
     (source / "在校表现.csv").write_text(
         BEHAVIOR_HEADER
-        + "举手,2026-11-07T00:00:00Z,课堂,积极,老师,李律研,,妈妈,主动举手\n",
+        + "举手,2026-11-07T00:00:00Z,课堂,积极,老师,小明,,妈妈,主动举手\n",
         encoding="utf-8-sig",
     )
     if html:
@@ -50,9 +50,9 @@ def test_parses_real_headers_and_aliases(tmp_path):
     assert len(data["children"]) == 1
     child = data["children"][0]
     assert child["legacyId"] == "child-1"
-    assert child["nickname"] == "李律研"
+    assert child["nickname"] == "小明"
     assert child["birthday"] == "2020-05-21"
-    assert child["school"] == "松山湖中心小学"
+    assert child["school"] == "示例中心小学"
     assert child["className"] == "一（12）班"
 
     assert [item["kind"] for item in data["items"]] == ["task", "task", "behavior"]

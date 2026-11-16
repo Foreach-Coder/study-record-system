@@ -9,9 +9,9 @@ Test-DuCase 'bridge route preserves getMessageById arguments' {
         $script:duBridgeRouteArguments=[string[]]$Arguments
         return @{success=$true;operation=$Arguments[0]}
     }
-    $result=Invoke-DuCommand -Arguments @('bridge','getMessageById','--cid','77728566311','--message-id','27609201248057')
+    $result=Invoke-DuCommand -Arguments @('bridge','getMessageById','--cid','10000000001','--message-id','27609201248057')
     Assert-DuEqual $result.operation 'getMessageById'
-    Assert-DuEqual $script:duBridgeRouteArguments ([string[]]@('getMessageById','--cid','77728566311','--message-id','27609201248057'))
+    Assert-DuEqual $script:duBridgeRouteArguments ([string[]]@('getMessageById','--cid','10000000001','--message-id','27609201248057'))
 }
 
 Test-DuCase 'help documents the bridge command and Frida dependency override' {
@@ -33,7 +33,7 @@ Test-DuCase 'bridge getMessageById validates native ids and returns the matching
             success=$true
             message=@{
                 baseMessage=@{
-                    conversationId='77728566311'
+                    conversationId='10000000001'
                     messageId='27609201248057'
                     content=@{contentType=3100;attachments=@(@{extension=@{desc='Synthetic summary';payloadV2='{"contents":[]}'}})}
                 }
@@ -41,12 +41,12 @@ Test-DuCase 'bridge getMessageById validates native ids and returns the matching
             }
         }
     }
-    $result=Invoke-DuBridgeCommand -Arguments @('getMessageById','--cid','77728566311','--message-id','27609201248057')
+    $result=Invoke-DuBridgeCommand -Arguments @('getMessageById','--cid','10000000001','--message-id','27609201248057')
     Assert-DuEqual $result.success $true
     Assert-DuEqual $result.method 'getMessageById'
     Assert-DuEqual $result.processId 4242
     Assert-DuEqual $result.clientVersion '9.0.4.261021001'
-    Assert-DuEqual $result.message.baseMessage.conversationId '77728566311'
+    Assert-DuEqual $result.message.baseMessage.conversationId '10000000001'
     Assert-DuEqual $result.message.baseMessage.messageId '27609201248057'
     Assert-DuTrue (-not $result.message.Contains('access_token')) 'credential fields must not be emitted'
     Assert-DuTrue ((ConvertTo-DuJson $result) -notmatch 'SYNTHETIC-SECRET') 'credential values must not be emitted'
@@ -62,7 +62,7 @@ Test-DuCase 'bridge getMessageById explains when DingTalk has no loaded local br
         return @{success=$false;error=@{code='BRIDGE_PAGE_NOT_FOUND';browserIds=@(1,2)}}
     }
     Assert-DuThrows {
-        Invoke-DuBridgeCommand -Arguments @('getMessageById','--cid','77728566311','--message-id','27609201248057')
+        Invoke-DuBridgeCommand -Arguments @('getMessageById','--cid','10000000001','--message-id','27609201248057')
     } '提供消息桥接的本地页面'
 }
 
@@ -70,10 +70,10 @@ Test-DuCase 'bridge getMessageById rejects non-native ids and unknown operations
     $script:duBridgeRuntimeCalls=0
     function Resolve-DuBridgeRuntime { $script:duBridgeRuntimeCalls++; throw 'must not run' }
     foreach($arguments in @(
-        @('getMessageById','--cid','cidg0FZeOnGo05sXU7l2N8pug==','--message-id','27609201248057'),
-        @('getMessageById','--cid','77728566311','--message-id','msg1Xb2rGLZ/MIHA1p8aiCgtQ=='),
-        @('getMessageById','--cid','77728566311'),
-        @('unknown','--cid','77728566311','--message-id','27609201248057')
+        @('getMessageById','--cid','cidEXAMPLE0000000000000000==','--message-id','27609201248057'),
+        @('getMessageById','--cid','10000000001','--message-id','msg1Xb2rGLZ/MIHA1p8aiCgtQ=='),
+        @('getMessageById','--cid','10000000001'),
+        @('unknown','--cid','10000000001','--message-id','27609201248057')
     )) { Assert-DuThrows { Invoke-DuBridgeCommand -Arguments $arguments } }
     Assert-DuEqual $script:duBridgeRuntimeCalls 0
 }
@@ -97,10 +97,10 @@ Test-DuCase 'bridge agent waits for an asynchronous Frida result and stops the h
         frida=@{command=(Get-Process -Id $PID).Path;prefix=[string[]]@('-NoLogo','-NoProfile','-NonInteractive','-File',(Join-Path $PSScriptRoot 'FakeFrida.ps1'))}
     }
     $elapsed=[Diagnostics.Stopwatch]::StartNew()
-    $result=Invoke-DuBridgeAgent -Runtime $runtime -Cid '77728566311' -MessageId '27609201248057'
+    $result=Invoke-DuBridgeAgent -Runtime $runtime -Cid '10000000001' -MessageId '27609201248057'
     $elapsed.Stop()
     Assert-DuEqual $result.success $true
-    Assert-DuEqual $result.message.baseMessage.conversationId '77728566311'
+    Assert-DuEqual $result.message.baseMessage.conversationId '10000000001'
     Assert-DuEqual $result.message.baseMessage.messageId '27609201248057'
     $marker=@(Get-ChildItem -LiteralPath $temporary -Filter '*.marker')
     $stop=@(Get-ChildItem -LiteralPath $temporary -Filter '*.stop')

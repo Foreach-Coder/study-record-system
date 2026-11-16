@@ -22,7 +22,7 @@
     .\compare-entries.ps1 `
         -OldEntry D:\backup\dingtalk-utils\dingtalk-utils.ps1 `
         -NewEntry D:\codes\study-record-system\cli\dingtalk-bridge\dingtalk-bridge.ps1 `
-        -Cid 77728566311 `
+        -Cid 10000000001 `
         -OutFile D:\tmp\equivalence-report.json
 #>
 [CmdletBinding()]
@@ -446,7 +446,7 @@ function Get-BridgeCases {
     $cases = @()
 
     $cases += New-BridgeCase -Name 'getConversation' -Arguments @('bridge', 'getConversation', '--cid', $Cid) -SortArrays @{}
-    $cases += New-BridgeCase -Name 'searchGroups' -Arguments @('bridge', 'searchGroups', '--query', '青竹园') -SortArrays @{ '$.items' = 'conversationId' }
+    $cases += New-BridgeCase -Name 'searchGroups' -Arguments @('bridge', 'searchGroups', '--query', '示例班') -SortArrays @{ '$.items' = 'conversationId' }
     $cases += New-BridgeCase -Name 'listMessages' -Arguments @('bridge', 'listMessages', '--cid', $Cid, '--start', $Start, '--end', $End) -SortArrays @{}
     $cases += New-BridgeCase -Name 'getMessageById' -Arguments @('bridge', 'getMessageById', '--cid', $Cid, '--message-id', $MessageId) -SortArrays @{}
     $cases += New-BridgeCase -Name 'getMessagesById' -Arguments @('bridge', 'getMessagesById', '--cid', $Cid, '--message-ids', ($MessageId + ',' + $SecondMessageId)) -SortArrays @{ '$.missingIds' = '$self'; '$.failures' = 'messageId' }
@@ -535,7 +535,7 @@ function Compare-BridgeEntries {
     Write-Line '=== dingtalk bridge equivalence harness ==='
     Write-Line ('old entry : ' + $oldFull)
     Write-Line ('new entry : ' + $newFull)
-    Write-Line ('cid       : ' + $Cid + '   (openCid cidg0FZeOnGo05sXU7l2N8pug==)')
+    Write-Line ('cid       : ' + $Cid + '   (openCid cidEXAMPLE0000000000000000==)')
     Write-Line ('window    : [' + $Start + ', ' + $End + ')')
     Write-Line ('ids       : messageId=' + $MessageId + ' second=' + $SecondMessageId + ' homeworkId=' + $HomeworkId + ' noticeId=' + $NoticeId)
     Write-Line ''
@@ -664,7 +664,7 @@ function Compare-BridgeEntries {
         oldEntry      = $oldFull
         newEntry      = $newFull
         cid           = $Cid
-        openCid       = 'cidg0FZeOnGo05sXU7l2N8pug=='
+        openCid       = 'cidEXAMPLE0000000000000000=='
         timeRange     = [ordered]@{
             start     = $Start
             end       = $End

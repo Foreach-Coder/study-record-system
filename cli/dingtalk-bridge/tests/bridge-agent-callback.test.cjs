@@ -18,7 +18,7 @@ const context = vm.createContext({
   entries: [{ browserId: 3 }],
   pending: 1, selected: false, completed: false, discoveryComplete: true,
   messageRequestId: 900123,
-  request: { cid: '77728566311', messageId: '27609201248057' },
+  request: { cid: '10000000001', messageId: '27609201248057' },
   execute: (entry, id, expression) => { dispatched.push({ id, expression }); return 1; },
   emit: value => emitted.push(value),
 });
@@ -33,10 +33,10 @@ function deliver(id, body) {
 deliver(100003, { result: { type: 'string', value: '{"available":true}' } });
 assert.equal(dispatched.length, 1, 'a successful CEF availability result must dispatch the message read');
 assert.equal(dispatched[0].id, 900123, 'the per-session message request id must be used');
-assert.match(dispatched[0].expression, /getMessageById\("77728566311","27609201248057"/);
+assert.match(dispatched[0].expression, /getMessageById\("10000000001","27609201248057"/);
 assert.equal(emitted.length, 0, 'a successful probe must not be reported as a missing page');
 
-const message = { baseMessage: { conversationId: '77728566311', messageId: '27609201248057', content: { attachments: [{ extension: { payloadV2: '{"text":"完整正文"}' } }] } } };
+const message = { baseMessage: { conversationId: '10000000001', messageId: '27609201248057', content: { attachments: [{ extension: { payloadV2: '{"text":"完整正文"}' } }] } } };
 deliver(900123, { result: { type: 'string', value: JSON.stringify({ success: true, message }) } });
 assert.deepEqual(JSON.parse(JSON.stringify(emitted[0])), { success: true, message });
 console.log('PASS CEF callback preserves the complete returned message');

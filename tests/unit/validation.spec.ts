@@ -9,10 +9,10 @@ import {
 import { addDays } from "../../src/shared/dates";
 import { validateBehavior, validateChild, validateTask } from "../../src/shared/validation";
 
-const ctx = { today: "2026-11-07", childNames: new Set(["李律研"]) };
+const ctx = { today: "2026-11-07", childNames: new Set(["小明"]) };
 
 const baseTask = {
-  child: "李律研",
+  child: "小明",
   title: "x",
   body: "",
   type: "todo",
@@ -20,7 +20,7 @@ const baseTask = {
 };
 
 const baseBehavior = {
-  child: "李律研",
+  child: "小明",
   title: "x",
   body: "",
   occurredOn: "2026-11-07",
@@ -114,7 +114,7 @@ describe("aliases", () => {
 describe("validateTask", () => {
   it("accepts a valid homework", () => {
     const result = validateTask({
-      child: "李律研",
+      child: "小明",
       title: "熟读拼音三表",
       body: "### 读什么\n三表",
       type: "作业",
@@ -142,9 +142,9 @@ describe("validateTask", () => {
   });
 
   it("rejects a missing title, missing subject and external images", () => {
-    expect(validateTask({ child: "李律研", title: "", body: "", type: "作业", subject: "语文", dueDate: "2026-11-08" }, ctx).ok).toBe(false);
-    expect(validateTask({ child: "李律研", title: "x", body: "", type: "作业", subject: "", dueDate: "2026-11-08" }, ctx).ok).toBe(false);
-    expect(validateTask({ child: "李律研", title: "x", body: "", type: "作业", subject: "语文", dueDate: "2026-11-08", images: [{ url: "https://example.com/a.jpg", title: null }] }, ctx).ok).toBe(false);
+    expect(validateTask({ child: "小明", title: "", body: "", type: "作业", subject: "语文", dueDate: "2026-11-08" }, ctx).ok).toBe(false);
+    expect(validateTask({ child: "小明", title: "x", body: "", type: "作业", subject: "", dueDate: "2026-11-08" }, ctx).ok).toBe(false);
+    expect(validateTask({ child: "小明", title: "x", body: "", type: "作业", subject: "语文", dueDate: "2026-11-08", images: [{ url: "https://example.com/a.jpg", title: null }] }, ctx).ok).toBe(false);
   });
 
   it("rejects an unknown child", () => {
@@ -152,9 +152,9 @@ describe("validateTask", () => {
   });
 
   it("falls back to childName when child is empty", () => {
-    const result = validateTask({ ...baseTask, child: "", childName: "李律研" }, ctx);
+    const result = validateTask({ ...baseTask, child: "", childName: "小明" }, ctx);
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.value.childName).toBe("李律研");
+    if (result.ok) expect(result.value.childName).toBe("小明");
   });
 
   it("rejects a startDate after the dueDate", () => {
@@ -207,7 +207,7 @@ describe("validateTask", () => {
 
   it("forces checked to completed", () => {
     const result = validateTask({
-      child: "李律研", title: "x", body: "", type: "todo", dueDate: "2026-11-08",
+      child: "小明", title: "x", body: "", type: "todo", dueDate: "2026-11-08",
       completed: false, checked: true,
     }, ctx);
     expect(result.ok).toBe(true);
@@ -237,7 +237,7 @@ describe("validateTask", () => {
 describe("validateBehavior", () => {
   it("accepts a valid behavior and normalizes aliases", () => {
     const result = validateBehavior({
-      child: "李律研",
+      child: "小明",
       title: "课堂发言",
       body: "",
       occurredOn: "2026-11-07",
@@ -279,10 +279,10 @@ describe("validateBehavior", () => {
 describe("validateChild", () => {
   it("accepts a valid child", () => {
     const result = validateChild({
-      nickname: "李律研",
+      nickname: "小明",
       birthday: "2014-05-01",
       grade: "五年级",
-      school: "松山湖中心小学",
+      school: "示例中心小学",
       className: "五（12）班",
       headTeacher: "王老师",
       note: "安静",
@@ -300,11 +300,11 @@ describe("validateChild", () => {
   });
 
   it("enforces the birthday range", () => {
-    expect(validateChild({ nickname: "李律研", birthday: "2005-01-01" }, "2026-11-07").ok).toBe(true);
-    expect(validateChild({ nickname: "李律研", birthday: "2026-11-07" }, "2026-11-07").ok).toBe(true);
-    expect(childFields({ nickname: "李律研", birthday: "2004-12-31" }, "2026-11-07").birthday).toBe("生日超出允许范围");
-    expect(childFields({ nickname: "李律研", birthday: "2026-11-08" }, "2026-11-07").birthday).toBe("生日超出允许范围");
-    expect(childFields({ nickname: "李律研", birthday: "abc" }, "2026-11-07").birthday).toBe("生日格式必须是 YYYY-MM-DD");
+    expect(validateChild({ nickname: "小明", birthday: "2005-01-01" }, "2026-11-07").ok).toBe(true);
+    expect(validateChild({ nickname: "小明", birthday: "2026-11-07" }, "2026-11-07").ok).toBe(true);
+    expect(childFields({ nickname: "小明", birthday: "2004-12-31" }, "2026-11-07").birthday).toBe("生日超出允许范围");
+    expect(childFields({ nickname: "小明", birthday: "2026-11-08" }, "2026-11-07").birthday).toBe("生日超出允许范围");
+    expect(childFields({ nickname: "小明", birthday: "abc" }, "2026-11-07").birthday).toBe("生日格式必须是 YYYY-MM-DD");
   });
 
   it("rejects optional fields over their limits", () => {
@@ -330,7 +330,7 @@ describe("validateChild", () => {
     try {
       // 2026-11-07T16:30Z is already 2026-11-08 00:30 in Shanghai.
       vi.setSystemTime(new Date("2026-11-07T16:30:00Z"));
-      expect(validateChild({ nickname: "李律研", birthday: "2026-11-08" }).ok).toBe(true);
+      expect(validateChild({ nickname: "小明", birthday: "2026-11-08" }).ok).toBe(true);
     } finally {
       vi.useRealTimers();
     }

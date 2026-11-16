@@ -24,15 +24,15 @@
 工具不安装到其他目录、不注册全局命令、不修改 PATH 或 PowerShell 配置。直接使用项目里的 `dingtalk-bridge.ps1`、`lib`、`modules` 和 `scripts`：
 
 ```powershell
-Set-Location 'D:\老力与响\codes\study-record-system\cli\dingtalk-bridge'
+Set-Location '<仓库根>\cli\dingtalk-bridge'
 .\dingtalk-bridge.ps1 bridge --help
-.\dingtalk-bridge.ps1 bridge getConversation --cid 77728566311
+.\dingtalk-bridge.ps1 bridge getConversation --cid 10000000001
 ```
 
 在其他目录时使用完整路径调用；`downloadImage` 的默认输出固定在项目目录 `.temp`，`batch --input` 的相对路径按当前目录解析：
 
 ```powershell
-& 'D:\老力与响\codes\study-record-system\cli\dingtalk-bridge\dingtalk-bridge.ps1' bridge listGroupTodos --cid 77728566311
+& '<仓库根>\cli\dingtalk-bridge\dingtalk-bridge.ps1' bridge listGroupTodos --cid 10000000001
 ```
 
 ## 命令
@@ -59,18 +59,18 @@ Set-Location 'D:\老力与响\codes\study-record-system\cli\dingtalk-bridge'
 每个命令一个示例（组织、班级、学生和消息 ID 需替换为真实值）：
 
 ```powershell
-.\dingtalk-bridge.ps1 bridge searchGroups --query '青竹园'
-.\dingtalk-bridge.ps1 bridge getConversation --cid 77728566311
-.\dingtalk-bridge.ps1 bridge listMessages --cid 77728566311 --start '2026-11-04' --end '2026-11-05'
-.\dingtalk-bridge.ps1 bridge getMessageById --cid 77728566311 --message-id 27609201248057
-.\dingtalk-bridge.ps1 bridge getMessagesById --cid 77728566311 --message-ids 27609201248057,27609201248058
+.\dingtalk-bridge.ps1 bridge searchGroups --query '示例班'
+.\dingtalk-bridge.ps1 bridge getConversation --cid 10000000001
+.\dingtalk-bridge.ps1 bridge listMessages --cid 10000000001 --start '2026-11-04' --end '2026-11-05'
+.\dingtalk-bridge.ps1 bridge getMessageById --cid 10000000001 --message-id 27609201248057
+.\dingtalk-bridge.ps1 bridge getMessagesById --cid 10000000001 --message-ids 27609201248057,27609201248058
 .\dingtalk-bridge.ps1 bridge getEducationRoles --corp-id dingYourCorpId --class-id 123456
 .\dingtalk-bridge.ps1 bridge listHomework --corp-id dingYourCorpId --class-id 123456 --student-id 789012
 .\dingtalk-bridge.ps1 bridge listHomework --corp-id dingYourCorpId --class-id 123456 --role teacher
 .\dingtalk-bridge.ps1 bridge getHomework --corp-id dingYourCorpId --class-id 123456 --student-id 789012 --homework-id 654321
 .\dingtalk-bridge.ps1 bridge listNotices --corp-id dingYourCorpId --class-id 123456 --student-id 789012 --status UN_HAVE_DONE
 .\dingtalk-bridge.ps1 bridge getNotice --corp-id dingYourCorpId --class-id 123456 --student-id 789012 --notice-id 111222
-.\dingtalk-bridge.ps1 bridge listGroupTodos --cid 77728566311
+.\dingtalk-bridge.ps1 bridge listGroupTodos --cid 10000000001
 .\dingtalk-bridge.ps1 bridge batch --input .temp/requests.json --timeout-seconds 120
 .\dingtalk-bridge.ps1 bridge downloadImage --resource-id '@实际媒体ID' --output .temp/image.jpg
 ```
@@ -100,7 +100,7 @@ Set-Location 'D:\老力与响\codes\study-record-system\cli\dingtalk-bridge'
   {
     "method": "listMessages",
     "params": {
-      "cid": "77728566311",
+      "cid": "10000000001",
       "start": "2026-11-04",
       "end": "2026-11-05",
       "pageSize": 50,
@@ -108,7 +108,7 @@ Set-Location 'D:\老力与响\codes\study-record-system\cli\dingtalk-bridge'
       "maxItems": 10000
     }
   },
-  {"method": "listGroupTodos", "params": {"cid": "77728566311"}}
+  {"method": "listGroupTodos", "params": {"cid": "10000000001"}}
 ]
 ```
 
@@ -177,7 +177,7 @@ PowerShell 测试与 Node 离线测试都使用合成数据和模拟 Frida，不
 
 ```powershell
 powershell -NoProfile -File .\tests\powershell\compare-entries.ps1 `
-  -NewEntry 'D:\老力与响\codes\study-record-system\cli\dingtalk-bridge\dingtalk-bridge.ps1' `
-  -Cid 77728566311 `
+  -NewEntry '<仓库根>\cli\dingtalk-bridge\dingtalk-bridge.ps1' `
+  -Cid 10000000001 `
   -OutFile .temp\equivalence-report.json
 ```

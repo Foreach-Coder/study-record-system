@@ -55,7 +55,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         body = self._record()
         if self.path == "/api/children":
-            return self._send(201, {"id": "c1", "nickname": "李律研"})
+            return self._send(201, {"id": "c1", "nickname": "小明"})
         if self.path == "/api/images":
             if self.server.fail_upload:
                 return self._send(500, {"error": {"code": "internal", "message": "上传失败"}})
@@ -80,12 +80,12 @@ def make_plan(tmp_path, image_urls):
         "children": [
             {
                 "legacyId": "child-1",
-                "nickname": "李律研",
+                "nickname": "小明",
                 "birthday": "2020-05-21",
                 "grade": "一年级",
-                "school": "松山湖中心小学",
+                "school": "示例中心小学",
                 "className": "一（12）班",
-                "headTeacher": "银湲",
+                "headTeacher": "王老师",
                 "note": None,
             }
         ],
@@ -94,7 +94,7 @@ def make_plan(tmp_path, image_urls):
                 "kind": "task",
                 "data": {
                     "legacyId": "task-1",
-                    "孩子": "李律研",
+                    "孩子": "小明",
                     "标题": "口算",
                     "正文": "",
                     "类型": "作业",
@@ -241,18 +241,18 @@ def test_apply_aborts_without_import_when_upload_fails(tmp_path):
 
 
 def test_apply_rewrites_body_skips_existing_child_and_caches(tmp_path):
-    server = start_server(children=[{"nickname": "李律研"}])
+    server = start_server(children=[{"nickname": "小明"}])
     try:
         base = f"http://127.0.0.1:{server.server_port}"
         url = f"{base}/img/a.png"
         plan = {
-            "children": [{"legacyId": "child-1", "nickname": "李律研"}],
+            "children": [{"legacyId": "child-1", "nickname": "小明"}],
             "items": [
                 {
                     "kind": "task",
                     "data": {
                         "legacyId": "task-1",
-                        "孩子": "李律研",
+                        "孩子": "小明",
                         "标题": "口算",
                         "正文": f"见 ![]({url}) 和 ![]({url})",
                         "类型": "作业",
@@ -306,7 +306,7 @@ def test_apply_rewrites_body_skips_existing_child_and_caches(tmp_path):
 
 
 def test_apply_uses_token_from_env(tmp_path):
-    server = start_server(children=[{"nickname": "李律研"}])
+    server = start_server(children=[{"nickname": "小明"}])
     try:
         base = f"http://127.0.0.1:{server.server_port}"
         plan = make_plan(tmp_path, [])

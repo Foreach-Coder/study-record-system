@@ -25,8 +25,8 @@ import sys
 from pathlib import Path
 
 DEFAULT_SOURCE: Path | None = None
-DEFAULT_TARGET = Path(r"D:\老力与响\codes\study-record-system\cli\.temp\study-record-sync")
-DEFAULT_CACHE = Path(r"D:\老力与响\.agents\skills\study-record-sync\.cache\media.json")
+DEFAULT_TARGET = Path(r"<仓库根>\cli\.temp\study-record-sync")
+DEFAULT_CACHE = Path(r"<工作区根>\.study-record-sync\media-cache.json")
 
 
 def sha256(path: Path) -> str:

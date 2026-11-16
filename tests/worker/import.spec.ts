@@ -12,7 +12,7 @@ const YESTERDAY = addDays(TODAY, -1);
 
 beforeAll(async () => {
   await applyD1Migrations(env.DB, (env as TestEnv).TEST_MIGRATIONS);
-  await env.DB.prepare("INSERT INTO children (id, nickname, created_at, updated_at) VALUES ('c1', '李律研', '2026-11-07T00:00:00.000Z', '2026-11-07T00:00:00.000Z')").run();
+  await env.DB.prepare("INSERT INTO children (id, nickname, created_at, updated_at) VALUES ('c1', '小明', '2026-11-07T00:00:00.000Z', '2026-11-07T00:00:00.000Z')").run();
 });
 
 function taskItem(over: Record<string, unknown> = {}) {

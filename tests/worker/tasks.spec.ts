@@ -11,7 +11,7 @@ const DUE = addDays(TODAY, 1);
 
 beforeAll(async () => {
   await applyD1Migrations(env.DB, (env as TestEnv).TEST_MIGRATIONS);
-  await env.DB.prepare("INSERT INTO children (id, nickname, created_at, updated_at) VALUES ('c1', '李律研', '2026-11-07T00:00:00.000Z', '2026-11-07T00:00:00.000Z')").run();
+  await env.DB.prepare("INSERT INTO children (id, nickname, created_at, updated_at) VALUES ('c1', '小明', '2026-11-07T00:00:00.000Z', '2026-11-07T00:00:00.000Z')").run();
 });
 
 async function create(over: Record<string, unknown> = {}) {
@@ -42,7 +42,7 @@ describe("tasks", () => {
       images: [],
       attachments: [],
       createdBy: null,
-      childName: "李律研",
+      childName: "小明",
     });
     expect((await create()).response.status).toBe(409);
     expect((await create({ dueDate: addDays(TODAY, 2) })).response.status).toBe(201);

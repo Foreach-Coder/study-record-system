@@ -14,15 +14,15 @@ ROOT = Path(__file__).resolve().parents[2]
 CLI = ROOT / "cli" / "study-record" / "study-record-cli.py"
 
 CHILD_1 = {
-    "id": "c1", "nickname": "李律研", "birthday": None, "grade": "三年级",
-    "school": "松山湖中心小学", "className": "一(12)班", "headTeacher": "王老师", "note": None,
+    "id": "c1", "nickname": "小明", "birthday": None, "grade": "三年级",
+    "school": "示例中心小学", "className": "一(12)班", "headTeacher": "王老师", "note": None,
 }
 CHILD_2 = {
     "id": "c2", "nickname": "李小明", "birthday": None, "grade": "一年级",
-    "school": "松山湖中心小学", "className": "一(3)班", "headTeacher": "陈老师", "note": None,
+    "school": "示例中心小学", "className": "一(3)班", "headTeacher": "陈老师", "note": None,
 }
 TASK = {
-    "id": "t1", "childId": "c1", "childName": "李律研", "title": "数学口算", "body": "一页",
+    "id": "t1", "childId": "c1", "childName": "小明", "title": "数学口算", "body": "一页",
     "type": "homework", "subject": "数学", "dueDate": "2026-11-07", "startDate": "2026-11-07",
     "completed": False, "checked": False, "images": [{"url": "/media/images/a.jpg", "title": None}],
     "createdBy": "爸爸", "createdAt": "2026-11-07T00:00:00.000Z", "updatedAt": "2026-11-07T00:00:00.000Z",
@@ -30,7 +30,7 @@ TASK = {
 TASK_LATER = {**TASK, "id": "t2", "title": "背古诗", "dueDate": "2026-11-08"}
 TASK_OTHER_CHILD = {**TASK, "id": "t3", "childId": "c2", "childName": "李小明", "title": "识字"}
 BEHAVIOR = {
-    "id": "b1", "childId": "c1", "childName": "李律研", "title": "主动帮同学", "body": "帮同学捡笔",
+    "id": "b1", "childId": "c1", "childName": "小明", "title": "主动帮同学", "body": "帮同学捡笔",
     "occurredOn": "2026-11-07", "dimension": "品德", "tone": "正向", "source": "老师反馈",
     "images": [], "createdBy": "爸爸", "createdAt": "2026-11-07T00:00:00.000Z",
     "updatedAt": "2026-11-07T00:00:00.000Z",
@@ -114,11 +114,11 @@ def run(tmp_path, *args, base=None):
 
 
 def test_show_returns_spec_shape(tmp_path, base):
-    result = run(tmp_path, "show", "--date", "2026-11-07", "--child", "李律研", "--json", base=base)
+    result = run(tmp_path, "show", "--date", "2026-11-07", "--child", "小明", "--json", base=base)
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
 
-    assert payload["student"] == "李律研"
+    assert payload["student"] == "小明"
     assert payload["date"] == "2026-11-07"
     assert "ok" not in payload
     assert "students" not in payload
@@ -129,7 +129,7 @@ def test_show_returns_spec_shape(tmp_path, base):
     assert task["正文"] == "一页"
     assert task["类型"] == "作业"
     assert task["科目"] == "数学"
-    assert task["孩子"] == "李律研"
+    assert task["孩子"] == "小明"
     assert task["截止日"] == "2026-11-07"
     assert task["开始日"] == "2026-11-07"
     assert task["已完成"] is False
@@ -144,7 +144,7 @@ def test_show_returns_spec_shape(tmp_path, base):
     assert behavior["维度"] == "品德"
     assert behavior["档位"] == "正向"
     assert behavior["来源"] == "老师反馈"
-    assert behavior["孩子"] == "李律研"
+    assert behavior["孩子"] == "小明"
     assert behavior["图片"] == {"image": {"images": []}}
     assert behavior["录入人"] == "爸爸"
 
@@ -156,7 +156,7 @@ def test_show_defaults_to_today_and_single_child(tmp_path, server):
     result = run(tmp_path, "show", "--json", base=server(state))
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
-    assert payload["student"] == "李律研"
+    assert payload["student"] == "小明"
     assert payload["date"] == today
     assert [item["record_id"] for item in payload["tasks"]] == ["t9"]
 
@@ -170,9 +170,9 @@ def test_show_requires_child_when_ambiguous(tmp_path, base):
 def test_show_rejects_unknown_child_and_bad_date(tmp_path, base):
     unknown = run(tmp_path, "show", "--date", "2026-11-07", "--child", "不存在", "--json", base=base)
     assert unknown.returncode == 1
-    bad_date = run(tmp_path, "show", "--date", "2026-13-01", "--child", "李律研", "--json", base=base)
+    bad_date = run(tmp_path, "show", "--date", "2026-13-01", "--child", "小明", "--json", base=base)
     assert bad_date.returncode == 1
-    compact_date = run(tmp_path, "show", "--date", "20261107", "--child", "李律研", "--json", base=base)
+    compact_date = run(tmp_path, "show", "--date", "20261107", "--child", "小明", "--json", base=base)
     assert compact_date.returncode == 1
 
 
@@ -204,9 +204,9 @@ def test_students_returns_spec_shape(tmp_path, base):
     assert "ok" not in payload
     assert [item["record_id"] for item in payload["students"]] == ["c1", "c2"]
     first = payload["students"][0]
-    assert first["name"] == "李律研"
+    assert first["name"] == "小明"
     assert first["grade"] == "三年级"
-    assert first["school"] == "松山湖中心小学"
+    assert first["school"] == "示例中心小学"
     assert first["klass"] == "一(12)班"
     assert first["teacher"] == "王老师"
 
@@ -222,7 +222,7 @@ def test_offline_is_a_usage_error(tmp_path, base):
 
 
 PLAN = {
-    "child": "李律研",
+    "child": "小明",
     "date": "2026-11-07",
     "by": "爸爸",
     "homework": [
@@ -342,7 +342,7 @@ def test_import_maps_plan_to_child_name(tmp_path, write_server):
     assert [item["kind"] for item in body["items"]] == ["task", "task", "behavior"]
 
     task = body["items"][0]["data"]
-    assert task["childName"] == "李律研"
+    assert task["childName"] == "小明"
     assert "childId" not in task
     assert task["title"] == "数学口算"
     assert task["type"] == "homework"
@@ -352,7 +352,7 @@ def test_import_maps_plan_to_child_name(tmp_path, write_server):
     assert task["createdBy"] == "爸爸"
     assert task["images"] == [{"url": "/media/images/a.jpg", "title": None}]
     assert body["items"][1]["data"]["type"] == "todo"
-    assert body["items"][1]["data"]["childName"] == "李律研"
+    assert body["items"][1]["data"]["childName"] == "小明"
     behavior = body["items"][2]["data"]
     assert behavior["occurredOn"] == "2026-11-07"
     assert behavior["dimension"] == "品德"
@@ -361,7 +361,7 @@ def test_import_maps_plan_to_child_name(tmp_path, write_server):
     payload = json.loads(result.stdout)
     assert payload["dry_run"] is False
     assert payload["ok"] is True
-    assert payload["student"] == "李律研"
+    assert payload["student"] == "小明"
     assert payload["date"] == "2026-11-07"
     task_table, behavior_table = payload["tables"]
     assert task_table["table"] == "task"
@@ -410,7 +410,7 @@ def test_import_explicit_todo_keeps_type(tmp_path, write_server):
         tmp_path,
         "day.json",
         {
-            "child": "李律研",
+            "child": "小明",
             "date": "2026-11-07",
             "items": [{"kind": "todo", "data": {"标题": "带水杯"}}],
         },
@@ -420,7 +420,7 @@ def test_import_explicit_todo_keeps_type(tmp_path, write_server):
     assert result.returncode == 0, result.stderr
     body = json.loads(httpd.captured[0]["body"])
     assert body["items"][0]["data"]["type"] == "todo"
-    assert body["items"][0]["data"]["childName"] == "李律研"
+    assert body["items"][0]["data"]["childName"] == "小明"
     assert json.loads(result.stdout)["tables"][0]["submitted"] == 1
 
 
@@ -554,19 +554,19 @@ def test_checked_sets_checked_and_completed(tmp_path, write_server):
 
 def test_done_find_resolves_one_task(tmp_path, write_server, server):
     base, httpd = write_server({"ok": True})
-    result = run(tmp_path, "done", "--find", "数学", "--child", "李律研", "--json", base=base)
+    result = run(tmp_path, "done", "--find", "数学", "--child", "小明", "--json", base=base)
     assert result.returncode == 0, result.stderr
     assert [sent["path"] for sent in httpd.captured] == ["/api/tasks/t1"]
     duplicate = {**STATE, "tasks": [TASK, {**TASK, "id": "t9"}]}
     ambiguous = run(
-        tmp_path, "done", "--find", "数学", "--child", "李律研", "--json", base=server(duplicate)
+        tmp_path, "done", "--find", "数学", "--child", "小明", "--json", base=server(duplicate)
     )
     assert ambiguous.returncode == 1
 
 
 def test_done_all_marks_incomplete_tasks(tmp_path, write_server):
     base, httpd = write_server({"ok": True})
-    result = run(tmp_path, "done", "--all", "--child", "李律研", "--json", base=base)
+    result = run(tmp_path, "done", "--all", "--child", "小明", "--json", base=base)
     assert result.returncode == 0, result.stderr
     assert [sent["path"] for sent in httpd.captured] == ["/api/tasks/t1", "/api/tasks/t2"]
     assert all(json.loads(sent["body"]) == {"completed": True} for sent in httpd.captured)
@@ -599,7 +599,7 @@ def test_done_auth_error_exits_4(tmp_path, write_server):
 
 
 def test_pending_lists_incomplete_tasks_for_child(tmp_path, base):
-    result = run(tmp_path, "pending", "--child", "李律研", "--json", base=base)
+    result = run(tmp_path, "pending", "--child", "小明", "--json", base=base)
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
     assert payload["ok"] is True
@@ -607,12 +607,12 @@ def test_pending_lists_incomplete_tasks_for_child(tmp_path, base):
     first = payload["tasks"][0]
     assert first["标题"] == "数学口算"
     assert first["类型"] == "作业"
-    assert first["孩子"] == "李律研"
+    assert first["孩子"] == "小明"
 
 
 def test_daily_renders_selected_child_markdown(tmp_path, base):
     result = run(
-        tmp_path, "daily", "--date", "2026-11-07", "--child", "李律研", "--json", base=base
+        tmp_path, "daily", "--date", "2026-11-07", "--child", "小明", "--json", base=base
     )
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
@@ -621,9 +621,9 @@ def test_daily_renders_selected_child_markdown(tmp_path, base):
     markdown = payload["markdown"]
     assert markdown.startswith("# 2026-11-07 学习记录")
     assert "- 任务 1 个，完成 0 个" in markdown
-    assert "- [ ] 李律研 · 数学口算（2026-11-07）" in markdown
+    assert "- [ ] 小明 · 数学口算（2026-11-07）" in markdown
     assert "## 在校表现" in markdown
-    assert "李律研 · 主动帮同学：帮同学捡笔" in markdown
+    assert "小明 · 主动帮同学：帮同学捡笔" in markdown
 
 
 def test_doctor_reports_state(tmp_path, base):
