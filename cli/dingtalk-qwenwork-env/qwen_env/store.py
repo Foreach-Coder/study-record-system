@@ -140,12 +140,17 @@ def read_remark(directory: Path) -> str:
     return remark if isinstance(remark, str) else ""
 
 
-def write_remark(directory: Path, remark: str) -> None:
-    """Persist a remark; the marker file is UTF-8 without BOM."""
+def assert_remark(remark: object) -> None:
+    """Raise ValueError when ``remark`` cannot be stored as an environment remark."""
     if not isinstance(remark, str):
         raise ValueError("备注必须是字符串。")
     if len(remark) > REMARK_LIMIT:
         raise ValueError(f"备注最长 {REMARK_LIMIT} 个字符，当前 {len(remark)}。")
+
+
+def write_remark(directory: Path, remark: str) -> None:
+    """Persist a remark; the marker file is UTF-8 without BOM."""
+    assert_remark(remark)
     _marker_path(directory).write_text(
         json.dumps({REMARK_KEY: remark}, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
