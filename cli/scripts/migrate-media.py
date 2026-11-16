@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One-off migration of the study-record-sync media tree and its cache.
+r"""One-off migration of the study-record-sync media tree and its cache.
 
 The bridge split moved the sync tool under ``cli/``; the media tree used to
 live under ``codes/dingtalk-utils/.temp/study-record-sync``.  This script
@@ -7,8 +7,12 @@ copies it byte-for-byte, verifies every file with SHA-256, and rewrites the
 absolute ``file`` paths recorded in ``.cache/media.json`` so old cache hits
 keep resolving.
 
-    python cli/scripts/migrate-media.py            # dry run
-    python cli/scripts/migrate-media.py --apply    # copy + rewrite cache
+The migration already ran (200 files, 41,317,805 B, 175 cache entries) and the
+old ``codes/dingtalk-utils`` tree has since been deleted, so this script is now
+audit-only: it needs an explicit ``--source`` pointing at a backup copy.
+
+    python cli/scripts/migrate-media.py --source D:\backup\study-record-sync
+    python cli/scripts/migrate-media.py --source ... --apply
 """
 
 from __future__ import annotations
@@ -20,7 +24,7 @@ import shutil
 import sys
 from pathlib import Path
 
-DEFAULT_SOURCE = Path(r"D:\老力与响\codes\dingtalk-utils\.temp\study-record-sync")
+DEFAULT_SOURCE: Path | None = None
 DEFAULT_TARGET = Path(r"D:\老力与响\codes\study-record-system\cli\.temp\study-record-sync")
 DEFAULT_CACHE = Path(r"D:\老力与响\.agents\skills\study-record-sync\.cache\media.json")
 
@@ -109,12 +113,14 @@ def rewrite_cache(cache_path: Path, source: Path, target: Path, apply: bool) -> 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="迁移 study-record-sync 媒体目录与缓存路径")
-    parser.add_argument("--source", type=Path, default=DEFAULT_SOURCE)
+    parser.add_argument("--source", type=Path, default=DEFAULT_SOURCE, help="旧媒体目录（已随 codes/dingtalk-utils 删除，需指向备份）")
     parser.add_argument("--target", type=Path, default=DEFAULT_TARGET)
     parser.add_argument("--cache", type=Path, default=DEFAULT_CACHE)
     parser.add_argument("--apply", action="store_true", help="真正复制并改写缓存；默认只检查")
     args = parser.parse_args(argv)
 
+    if args.source is None:
+        parser.error("--source is required: the old tree was deleted after the migration")
     if not args.source.is_dir():
         print(f"源目录不存在：{args.source}", file=sys.stderr)
         return 1

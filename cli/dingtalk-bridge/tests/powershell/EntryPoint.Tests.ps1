@@ -1,4 +1,5 @@
-﻿$entryRepository=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
+﻿. (Join-Path $PSScriptRoot 'TestHarness.ps1')
+$entryRepository=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 . (Join-Path $entryRepository 'lib\Core.ps1')
 Test-DuCase 'relocated native entrypoint runs without init or Node and returns a safe status' {
     $directory=Get-DuTestDirectory
