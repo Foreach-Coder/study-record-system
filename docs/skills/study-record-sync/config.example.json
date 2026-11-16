@@ -1,0 +1,30 @@
+{
+  "_说明": "复制到 <工作区根>/.study-record-sync/config.json 后填入真实值；技能目录不存真实配置。",
+  "version": 1,
+  "timezone": "Asia/Shanghai",
+  "school": {
+    "groupName": "<班级群名>",
+    "cid": "<群 cid>",
+    "openCid": "<群 openCid>",
+    "corpId": "<企业 corpId>",
+    "classId": "<班级 classId>",
+    "studentId": "<学生 studentId>",
+    "studentName": "<孩子姓名>"
+  },
+  "record": {
+    "child": "<孩子姓名>",
+    "by": "<录入人>"
+  },
+  "senders": {
+    "<发送人 userId>": "<发送人显示名>"
+  },
+  "paths": {
+    "dingtalkEntry": "codes/study-record-system/cli/dingtalk-qwenwork-env/dingtalk-qwenwork-env.ps1",
+    "studyRecordCli": "codes/study-record-system/cli/study-record/study-record-cli.py",
+    "recordDir": "codes/study-record-system"
+  },
+  "dws": {
+    "env": "<DWS 环境名>",
+    "command": "dws"
+  }
+}
