@@ -12,12 +12,14 @@ description: 操作 Cloudflare 版「学习记录系统」（孩子档案 / 作�
 ## 入口
 
 ```bash
-python "D:/老力与响/codes/study-record-system/cli/study-record/study-record-cli.py" <command> [options]
+python "<仓库根>/cli/study-record/study-record-cli.py" <command> [options]
 ```
 
 认证优先级：`--token` > `STUDY_RECORD_TOKEN` > `%APPDATA%/study-record/config.json`（Windows）或 `~/.config/study-record/config.json`。Base URL 同理，默认 `https://study-record.foreach.me`。
 
 ## 先看现状
+
+下面示例都以仓库根为当前目录，真实路径见工作区 `AGENTS.md`。
 
 ```bash
 python cli/study-record/study-record-cli.py students
@@ -61,7 +63,7 @@ python cli/study-record/study-record-cli.py checked <record_id>
 
 ```json
 {
-  "child": "李律研",
+  "child": "<孩子姓名>",
   "date": "2026-11-07",
   "by": "爸爸",
   "homework": [
@@ -71,7 +73,7 @@ python cli/study-record/study-record-cli.py checked <record_id>
     {"标题": "周四体检", "正文": "在校完成", "截止日": "2026-11-08"}
   ],
   "behavior": [
-    {"标题": "入选阅读小榜样", "正文": "班主任在群里公布", "日期": "2026-11-07", "维度": "study", "档位": "positive", "来源": "teacher"}
+    {"标题": "入选阅读小榜样", "正文": "班主任在群里公布", "日期": "2026-11-07", "维度": "学习", "档位": "正向", "来源": "老师反馈"}
   ]
 }
 ```
@@ -97,7 +99,7 @@ python cli/study-record/study-record-cli.py revise revise.json --table task
 ## 只传图
 
 ```bash
-python cli/study-record/study-record-cli.py upload-image "D:/照片/板书.jpg"
+python cli/study-record/study-record-cli.py upload-image "<图片路径>"
 ```
 
 输出绝对 `imageUrl`，同时给出宽高；图片存 R2，`/media/` 需要登录。单图 ≤5 MiB，支持 png/jpeg/webp/gif。
