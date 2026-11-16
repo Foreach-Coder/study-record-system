@@ -22,10 +22,22 @@ function Get-DuQwenPythonCommand {
 $action = if ($Rest.Count -ge 1) { $Rest[0] } else { '--help' }
 
 if ($action -eq 'active') {
+    $env:DINGTALK_QWEN_HOME = $QwenRoot
     . (Join-Path $QwenRoot 'lib\Session.ps1')
-    $rest = @()
-    if ($Rest.Count -gt 1) { $rest = $Rest[1..($Rest.Count - 1)] }
-    exit (Invoke-DuQwenActive -Arguments $rest)
+    # NB: $Rest and $rest are the same PowerShell variable; keep a distinct name.
+    $activeArguments = @()
+    if ($Rest.Count -gt 1) { $activeArguments = $Rest[1..($Rest.Count - 1)] }
+    try {
+        $result = Invoke-DuQwenActive -Arguments $activeArguments
+        [Console]::Out.WriteLine($result)
+        exit 0
+    } catch {
+        $message = $_.Exception.Message
+        $code = if ($message -eq 'python_not_found') { 'python_not_found' } else { 'active_failed' }
+        $payload = @{ success = $false; errorCode = $code; error = $message } | ConvertTo-Json -Compress
+        [Console]::Out.WriteLine($payload)
+        exit 1
+    }
 }
 
 $command = Get-DuQwenPythonCommand
