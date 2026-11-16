@@ -20,3 +20,6 @@ __pycache__/
 
 .vite/
 .temp/
+
+# superpowers 的 spec/plan 只在本地保留，不进仓库
+docs/superpowers/
