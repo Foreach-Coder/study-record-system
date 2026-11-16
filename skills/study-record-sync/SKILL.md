@@ -334,5 +334,5 @@ powershell -NoProfile -File $bridge bridge listNotices --corp-id <corp> --class-
 ## 和另外两个技能的分工
 
 - `qingzhuyuan-sync`：钉钉 → **钉钉群 + 家校本**。要转发消息、发家校本时用它。
-- `study-record-guide`：学习记录系统**怎么用**的说明书（字段、选项、错误码）。源码在 `codes/study-record-system/docs/skills/study-record-guide/`，本机 `.agents/skills/study-record-guide` 是指向它的目录联接。本技能写库时遵循它。
+- `study-record-guide`：学习记录系统**怎么用**的说明书（字段、选项、错误码）。源码在 `codes/study-record-system/skills/study-record-guide/`，本机 `.agents/skills/study-record-guide` 是指向它的目录联接。本技能写库时遵循它。
 - 本技能：钉钉 → **学习记录系统**。不转发、不发群、不改页面。

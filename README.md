@@ -183,7 +183,7 @@ python cli/study-record/study-record-cli.py --help
 
 配套的 Agent 技能不在本仓库内：
 
-- `study-record-guide`：手动录入/查询（源码在本仓库 `docs/skills/study-record-guide/`；本机 `.agents\skills\study-record-guide` 是指向它的目录联接）
+- `study-record-guide`：手动录入/查询（源码在本仓库 `skills/study-record-guide/`；本机 `.agents\skills\study-record-guide` 是指向它的目录联接）
 - `study-record-sync`：从钉钉群与家校本同步（只在本机 `.agents\skills\`，不在本仓库）
 
 ## 钉钉只读桥接

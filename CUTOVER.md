@@ -48,7 +48,7 @@ npx cf deploy --secrets-file .dev.vars.prod.json
 - CLI：`cli/study-record/study-record-cli.py`，配置在 `%APPDATA%\study-record\config.json`。
 - 只读桥接：`cli/dingtalk-bridge/dingtalk-bridge.ps1`，从旧 `codes/dingtalk-utils` 抽出并通过逐项一致性对比。
 - DWS 身份隔离：`cli/dingtalk-qwenwork-env/dingtalk-qwenwork-env.ps1`（原 `qwenwork-env`），命令面为纯动作，`active` 由会话层实现；旧 `codes/dingtalk-utils` 已删除。
-- 手动录入技能：`study-record-guide`，源码在 `docs/skills/study-record-guide/`；本机 `.agents/skills/study-record-guide` 是指向它的目录联接（junction）。
+- 手动录入技能：`study-record-guide`，源码在 `skills/study-record-guide/`；本机 `.agents/skills/study-record-guide` 是指向它的目录联接（junction）。
 - 钉钉同步技能：`.agents/skills/study-record-sync`；写入调用新 CLI。
 - 旧 `xuexi-record` / `xuexi-sync` / `scripts/Merge-DingTalkMessages.ps1` 已于 2026-11-16 删除。
 
