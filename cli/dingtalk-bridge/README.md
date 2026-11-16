@@ -171,11 +171,12 @@ powershell -NoProfile -File .\tests\powershell\run.ps1
 node --test tests\bridge-agent-callback.test.cjs tests\bridge-readers.test.cjs
 ```
 
-PowerShell 测试与 Node 离线测试都使用合成数据和模拟 Frida，不需要真实登录，也不进行任何写操作。与旧工具 `dingtalk-utils` 的逐项一致性对比（11 个只读用例，仅规范化 `processId` 等易变字段）：
+PowerShell 测试与 Node 离线测试都使用合成数据和模拟 Frida，不需要真实登录，也不进行任何写操作。
+
+`compare-entries.ps1` 仍在：它当初用来证明本 CLI 与旧工具逐项等价（11 个只读用例，仅规范化 `processId` 等易变字段）。旧工具已删除，`-OldEntry` 现在只在想重跑对照时指向任意一份历史副本，不传就只跑新入口自检：
 
 ```powershell
 powershell -NoProfile -File .\tests\powershell\compare-entries.ps1 `
-  -OldEntry 'D:\老力与响\codes\dingtalk-utils\dingtalk-utils.ps1' `
   -NewEntry 'D:\老力与响\codes\study-record-system\cli\dingtalk-bridge\dingtalk-bridge.ps1' `
   -Cid 77728566311 `
   -OutFile .temp\equivalence-report.json

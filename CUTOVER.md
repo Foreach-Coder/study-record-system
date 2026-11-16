@@ -46,7 +46,8 @@ npx cf deploy --secrets-file .dev.vars.prod.json
 ## CLI 与技能
 
 - CLI：`cli/study-record/study-record-cli.py`，配置在 `%APPDATA%\study-record\config.json`。
-- 只读桥接：`cli/dingtalk-bridge/dingtalk-bridge.ps1`，从旧 `codes/dingtalk-utils` 抽出并通过逐项一致性对比；旧工具现在只剩 `qwenwork-env` 与转发层。
+- 只读桥接：`cli/dingtalk-bridge/dingtalk-bridge.ps1`，从旧 `codes/dingtalk-utils` 抽出并通过逐项一致性对比。
+- DWS 身份隔离：`cli/dingtalk-qwenwork-env/dingtalk-qwenwork-env.ps1`（原 `qwenwork-env`），命令面为纯动作，`active` 由会话层实现；旧 `codes/dingtalk-utils` 已删除。
 - 手动录入技能：`.agents/skills/study-record`。
 - 钉钉同步技能：`.agents/skills/study-record-sync`；写入调用新 CLI。
 - 旧 `xuexi-record` / `xuexi-sync` 保留不动，切换完成后可停用。

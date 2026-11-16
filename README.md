@@ -202,7 +202,7 @@ python cli/study-record/study-record-cli.py --help
 
 运行前提（`frida` CLI 在 PATH 上）、完整命令表、批量格式与只读边界见 [`cli/dingtalk-bridge/README.md`](./cli/dingtalk-bridge/README.md)。
 
-旧工具 `codes\dingtalk-utils` 现在只剩 `qwenwork-env`（DWS 环境与凭据隔离）和转发到本仓库 CLI 的 `modules\bridge.ps1` 兼容层，bridge 实现与测试只在本仓库维护。
+`cli/dingtalk-qwenwork-env/` 是同一轮迁移里搬进来的 DWS 身份隔离（原 `qwenwork-env`）：命令面改成纯动作（`list/add/update/remove/login/context/active`），Python 做存储、注册表、子进程与 JSON，PowerShell 只保留 `active` 需要的会话层。旧工具 `codes/dingtalk-utils` 已整棵删除，不再有兼容转发层。
 
 ## 数据模型
 

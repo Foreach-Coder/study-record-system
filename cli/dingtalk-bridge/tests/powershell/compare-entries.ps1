@@ -20,7 +20,7 @@
 
 .EXAMPLE
     .\compare-entries.ps1 `
-        -OldEntry D:\codes\dingtalk-utils\dingtalk-utils.ps1 `
+        -OldEntry D:\backup\dingtalk-utils\dingtalk-utils.ps1 `
         -NewEntry D:\codes\study-record-system\cli\dingtalk-bridge\dingtalk-bridge.ps1 `
         -Cid 77728566311 `
         -OutFile D:\tmp\equivalence-report.json
